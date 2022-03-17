@@ -1,0 +1,834 @@
+---
+title: "Kazalniki študijskih programov UM"
+author: "Teodor Petrič"
+date: "`r format(Sys.time(), '%Y-%m-%d')`"
+output:
+  html_document:
+    toc: yes
+    toc_float: yes
+    css: test.css
+    highlight: espresso
+    theme: paper
+    fig_caption: yes
+  pdf_document:
+    toc: yes
+  word_document:
+    toc: yes
+    highlight: tango
+    fig_caption: yes
+always_allow_html: yes
+params:
+  sifra_sp:
+    label: 'Študijska smer:'
+    value: GERE
+    input: select
+    choices:
+    - Univerza
+    - FILOZOFSKA
+    - 11AN
+    - 11GE
+    - 11PE
+    - 11FL
+    - 11ZG
+    - 11UZ
+    - ZGOE
+    - SOCE
+    - SLOE
+    - PSIE
+    - GERE
+    - 11SL
+    - 11SC
+    - 11NE
+    - 11MN
+    - 11MA
+    - 22YA
+    - 22YB
+    - 22YC
+    - 22YD
+    - 22YE
+    - 22YF
+    - 22YH
+    - 22YI
+    - 22YJ
+    - 22YK
+    - 22YL
+    - 22YM
+    - 22YO
+    - 22YR
+    - XPXA
+    - XNXB
+    - XNXC
+    - XNXE
+    - XNXF
+    - XNXH
+    - XNXJ
+---
+
+Version 1 (2020-12-12)
+
+Version 2 (2021-12-29)
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = FALSE,
+	message = FALSE,
+	warning = FALSE
+)
+library(tidyverse)
+library(scales)
+library(readxl)
+library(janitor)
+library(kableExtra)
+
+theme_set(theme_light())
+
+```
+
+Excelov zvezek: UM_KIZ skupno FF.xlsx
+
+```{r message=FALSE, warning=FALSE}
+kazal <- "data/UM_KIZ skupno FF.xlsx"
+```
+
+
+
+# Kazalnik 1: Interes za študij
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+# SEP2019
+# k1_clean <- read_xlsx("data/UM_KIZ skupno FF_.xlsx", 
+k1_clean <- read_xlsx(kazal, 
+                 sheet = "Kazalnik 1") %>% 
+  clean_names() %>% 
+  mutate(kratek_naziv_studijskega_programa_sp = 
+           str_to_sentence(kratek_naziv_studijskega_programa_sp)) %>% 
+  mutate(kratek_naziv_studijskega_programa_sp = 
+           str_replace(kratek_naziv_studijskega_programa_sp, 
+                       pattern = " - un", 
+                       replacement = "")) %>% 
+  mutate(kratek_naziv_studijskega_programa_sp = str_replace(
+    kratek_naziv_studijskega_programa_sp, pattern = " dvopredmetni",
+    replacement = "")) %>% 
+  rename(program = kratek_naziv_studijskega_programa_sp,
+         procent = vrednost_v_percent) %>% 
+  mutate(nacin_studija = str_to_title(nacin_studija)) %>% 
+  mutate(leto = as.integer(leto))
+
+```
+
+
+## SEP točka 16
+
+Statistična analiza vpisa v dodiplomske študijske programe v letu 2019 je pokazala, da je bilo na ravni Univerze vpisanih 123,2 % od vseh sprejetih kandidatov, kar pomeni, da je bilo 66 % razpisanih mest zasedenih s prvo prijavo. 
+
+Na ravni fakultete je bil delež vpisanih 126,5 %, prijavljenih glede na razpisana mesta pa 86,6 %. 
+
+Na študijskem programu Nemški jezik in književnost je bilo leta 2019 vpisanih 100 % od vseh sprejetih kandidatov s prvega prijavnega roka , tako da je bilo zasedenih 50 % razpisanih mest.
+
+Na študijskem programu Germanistika je bilo leta 2019 vpisanih 120 % od števila sprejetih kandidatov v prvem prijavnem roku, tako da je bilo zasedenih 32 % razpisanih mest.
+
+
+### Na ravni univerze UM:
+
+P01-09 Prijavljeni kandidati vs. razpisana vpisna mesta na UM
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# P01-09 Prijavljeni kandidati vs. razpisana vpisna mesta na UM
+k1_clean %>% 
+  select(sifra_kazalnika, kazalnik, fakulteta, vrsta_studija, nacin_studija, procent, leto) %>%
+  filter(sifra_kazalnika == "P01-09") %>% 
+  filter(nacin_studija == "Redni") %>% 
+  filter(vrsta_studija == "UN") %>% 
+  kbl() %>% kable_classic(full_width = T, html_font = "Cambria")
+
+k1_clean %>% 
+  select(sifra_kazalnika, kazalnik, fakulteta, vrsta_studija, nacin_studija, procent, leto) %>%
+  filter(sifra_kazalnika == "P01-09") %>% 
+  filter(nacin_studija == "Redni") %>% 
+  filter(vrsta_studija == "UN") %>% 
+  ggplot(aes(leto, procent, fill = leto, color = "black")) +
+  geom_col(show.legend = F) +
+  scale_x_continuous(breaks = c(2015,2016,2017,2018,2019,2020))
+  
+```
+
+
+P01-11 Vpisani študenti vs. sprejeti kandidati na UM
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# P01-11 Vpisani študenti vs. sprejeti kandidati na UM
+k1_clean %>% 
+  select(sifra_kazalnika, kazalnik, fakulteta, vrsta_studija, nacin_studija, procent, leto) %>%
+  filter(sifra_kazalnika == "P01-11") %>% 
+  filter(nacin_studija == "Redni") %>% 
+  filter(vrsta_studija == "UN") %>% 
+  kbl() %>% kable_classic(full_width = T, html_font = "Cambria")
+
+k1_clean %>% 
+  select(sifra_kazalnika, kazalnik, fakulteta, vrsta_studija, nacin_studija, procent, leto) %>%
+  filter(sifra_kazalnika == "P01-11") %>% 
+  filter(nacin_studija == "Redni") %>% 
+  filter(vrsta_studija == "UN") %>% 
+  ggplot(aes(leto, procent, fill = leto, color = "black")) +
+  geom_col(show.legend = F) +
+  scale_x_continuous(breaks = c(2015,2016,2017,2018,2019,2020))
+
+```
+
+
+### Fakultetna raven:
+
+P01-05 Prijavljeni kandidati vs. razpisana vpisna mesta za fakulteto
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# P01-05 Prijavljeni kandidati vs. razpisana vpisna mesta za fakulteto
+k1_clean %>% 
+  select(sifra_kazalnika, kazalnik, fakulteta, vrsta_studija, nacin_studija, procent, leto) %>%
+  filter(sifra_kazalnika == "P01-05") %>% 
+  filter(nacin_studija == "Redni") %>% 
+  filter(vrsta_studija == "UN") %>% 
+  kbl() %>% kable_classic(full_width = T, html_font = "Cambria")
+
+k1_clean %>% 
+  select(sifra_kazalnika, kazalnik, fakulteta, vrsta_studija, nacin_studija, procent, leto) %>%
+  filter(sifra_kazalnika == "P01-05") %>% 
+  filter(nacin_studija == "Redni") %>% 
+  filter(vrsta_studija == "UN") %>% 
+  ggplot(aes(leto, procent, fill = leto, color = "black")) +
+  geom_col(show.legend = F) +
+  scale_x_continuous(breaks = c(2015,2016,2017,2018,2019,2020))
+
+```
+
+
+P01-07 Vpisani študenti vs. sprejeti kandidati za fakulteto
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# P01-07 Vpisani študenti vs. sprejeti kandidati za fakulteto
+k1_clean %>% 
+  select(sifra_kazalnika, kazalnik, fakulteta, vrsta_studija, nacin_studija, procent, leto) %>%
+  filter(sifra_kazalnika == "P01-07") %>% 
+  filter(nacin_studija == "Redni") %>% 
+  filter(vrsta_studija == "UN") %>% 
+  kbl() %>% kable_classic(full_width = T, html_font = "Cambria")
+
+k1_clean %>% 
+  select(sifra_kazalnika, kazalnik, fakulteta, vrsta_studija, nacin_studija, procent, leto) %>%
+  filter(sifra_kazalnika == "P01-07") %>% 
+  filter(nacin_studija == "Redni") %>% 
+  filter(vrsta_studija == "UN") %>% 
+  ggplot(aes(leto, procent, fill = leto, color = "black")) +
+  geom_col(show.legend = F)
+
+```
+
+
+### Na oddelčni ravni
+
+Šifra študijskega programa (*yaml*):
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+readname = function()# Get the project name
+{
+  params$sifra_sp
+}
+prjName=readname()
+prjName
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# P01-01 Prijavljeni kandidati vs. razpisana vpisna mesta za fakulteto
+k1_p01_01 <- k1_clean %>% 
+  select(sifra_kazalnika, kazalnik, fakulteta, sifra_sp, vrsta_studija, nacin_studija, procent, leto) %>%
+  filter(sifra_kazalnika == "P01-01") %>% 
+  filter(nacin_studija == "Redni") %>%
+  # filter(vrsta_studija == "UN") %>% 
+  filter(sifra_sp == prjName)
+
+kbl(k1_p01_01) %>% kable_classic(full_width = T, html_font = "Cambria") %>% add_footnote(prjName)
+
+# P01-03 Vpisani študenti vs. sprejeti kandidati za fakulteto
+k1_p01_03 <- k1_clean %>% 
+  select(sifra_kazalnika, kazalnik, fakulteta, sifra_sp, 
+         vrsta_studija, nacin_studija, procent, leto) %>%
+  filter(sifra_kazalnika == "P01-03") %>% 
+  filter(nacin_studija == "Redni") %>% 
+  # filter(vrsta_studija == "UN") %>% 
+  filter(sifra_sp == prjName)
+
+kbl(k1_p01_03) %>% kable_classic(full_width = T, html_font = "Cambria") %>% add_footnote(prjName)
+
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+plot_po_letih <- function(tbl) {
+tbl %>% 
+  ggplot(aes(leto, procent, fill = prjName)) +
+  geom_col(position = "dodge", color = "black") + 
+  scale_x_continuous(breaks = c(2015, 2016, 2017, 2018, 2019, 2020)) +
+  theme(legend.position = "bottom") #+
+  # scale_y_continuous(labels = percent_format())
+}
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+k1_p01_01 %>% 
+  filter(sifra_sp == prjName) %>%
+  plot_po_letih() + 
+  labs(title = "Kazalnik 1: Interes za študij",
+       subtitle = "Prijavljeni kandidati vs. razpisana vpisna mesta",
+       x = "",
+       y = "Vrednost v %",
+       fill = "Študijski program")
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+k1_p01_03 %>% 
+  filter(sifra_sp == prjName) %>% 
+  plot_po_letih() + 
+  labs(title = "Kazalnik 1: Interes za študij",
+       subtitle = "Vpisani študenti vs. sprejeti kandidati",
+       x = "",
+       y = "Vrednost v %",
+       fill = "Študijski program")
+
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+k1_sprejeti_razpis <- k1_clean %>% 
+  select(kazalnik, fakulteta, sifra_sp, program, nacin_studija, procent, leto) %>%
+  filter(nacin_studija != "Izredni", fakulteta == "FF", 
+         str_detect(kazalnik, "^Sprejeti"),
+         str_detect(sifra_sp, 
+                    pattern = prjName)) %>% 
+  select(-fakulteta)
+
+k1_sprejeti_razpis %>% 
+  kbl() %>% kable_classic(full_width = T, html_font = "Cambria") 
+
+k1_sprejeti_razpis %>% 
+  ggplot(aes(leto, procent, fill = prjName)) +
+  geom_col(position = "dodge", color = "black") +
+  scale_x_continuous(breaks = c(2015, 2016, 2017, 2018, 2019, 2020)) +
+  theme(legend.position = "bottom") +
+  # scale_y_continuous(labels = percent_format()) +
+  labs(title = "Kazalnik 1: Interes za študij",
+       subtitle = "Sprejeti kandidati vs. razpisana vpisna mesta",
+       x = "",
+       y = "Vrednost v %",
+       fill = "Študijski program")
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+k1_vpisani_sprejeti <- k1_clean %>% 
+  select(kazalnik, fakulteta, sifra_sp, program, nacin_studija, procent, leto) %>%
+  filter(nacin_studija != "Izredni", fakulteta == "FF", 
+         str_detect(kazalnik, "^Vpisani"),
+         str_detect(sifra_sp, 
+                    pattern = prjName)) %>% 
+  select(-fakulteta)
+
+k1_vpisani_sprejeti %>% 
+  kbl() %>% kable_classic(full_width = T, html_font = "Cambria") 
+
+k1_vpisani_sprejeti %>% 
+    ggplot(aes(leto, procent, fill = sifra_sp)) +
+  geom_col(position = "dodge", color = "black") +
+  scale_x_continuous(breaks = c(2015, 2016, 2017, 2018, 2019, 2020)) +
+  theme(legend.position = "bottom") +
+  labs(title = "Kazalnik 1: Interes za študij",
+       subtitle = "Vpisani študenti vs. sprejeti kandidati",
+       x = "",
+       y = "Vrednost v %",
+       fill = "Študijski program")
+
+```
+
+
+# Kazalnik 2: Število študentov na visokošolskega učitelja
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# k2_clean <- read_xlsx("data/UM_KIZ skupno FF_.xlsx", 
+k2_clean <- read_xlsx(kazal, 
+                 sheet = "Kazalnik 2") %>% 
+  clean_names() %>% 
+  select(sifra_kazalnika, kazalnik, fakulteta, vrednost_v_percent, leto) %>% 
+  rename(procent = vrednost_v_percent) %>% 
+  mutate(leto = as.integer(leto))
+
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+k2_p02_01 <- k2_clean %>% 
+  select(sifra_kazalnika, kazalnik, fakulteta, procent, leto) %>%
+  filter(sifra_kazalnika == "P02-01")
+
+k2_p02_01 %>% 
+  kbl() %>% kable_classic(full_width = T, html_font = "Cambria") %>% add_footnote("FTE")
+
+k2_p02_03 <- k2_clean %>% 
+  select(sifra_kazalnika, kazalnik, fakulteta, procent, leto) %>%
+  filter(sifra_kazalnika == "P02-03")
+
+k2_p02_03 %>% 
+  kbl() %>% kable_classic(full_width = T, html_font = "Cambria") %>% add_footnote("FTE") 
+
+k2_clean %>% 
+  select(sifra_kazalnika, kazalnik, fakulteta, procent, leto) %>%
+  filter(sifra_kazalnika == "P02-01" | sifra_kazalnika == "P02-03") %>% 
+  ggplot(aes(leto, procent, fill = fakulteta)) +
+  geom_col(position = "dodge", color = "black") +
+  # geom_smooth(method = "lm") +
+  scale_x_continuous(breaks = c(2015, 2016, 2017, 2018, 2019, 2020)) +
+  theme(legend.position = "bottom") +
+  labs(title = "Kazalnik 2: Število študentov na visokošolskega učitelja",
+       subtitle = "(FTE)",
+       x = "",
+       y = "Vrednost v %", 
+       fill = "Ustanova")
+
+```
+
+
+# Kazalnik 3: Prehodnost študentov
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# k3_clean <- read_xlsx("data/UM_KIZ skupno FF_.xlsx", 
+k3_clean <- read_xlsx(kazal, 
+                 sheet = "Kazalnik 3") %>% 
+  clean_names() %>% 
+  mutate(kratek_naziv_studijskega_programa_sp = 
+           str_to_sentence(kratek_naziv_studijskega_programa_sp)) %>% 
+  rename(program = kratek_naziv_studijskega_programa_sp,
+         procent = vrednost_v_percent) %>% 
+  mutate(leto = as.integer(leto))
+
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+k3_prehod_01_02 <- k3_clean %>% 
+  select(sifra_kazalnika, kazalnik, fakulteta, sifra_sp, program, nacin_studija, procent, leto) %>%
+  filter(nacin_studija != "Izredni", fakulteta == "FF") %>% 
+  filter(sifra_kazalnika != "P03-04" & (sifra_sp == prjName)) %>%  
+  select(-fakulteta)
+
+k3_prehod_01_02 %>% 
+  kbl() %>% kable_classic(full_width = T, html_font = "Cambria") 
+
+k3_clean %>% 
+  select(sifra_kazalnika, kazalnik, fakulteta, sifra_sp, program, nacin_studija, procent, leto) %>%
+  filter(nacin_studija != "Izredni", fakulteta == "FF") %>% 
+  filter(sifra_kazalnika != "P03-04" & (sifra_sp == prjName)) %>% 
+  ggplot(aes(leto, procent, fill = sifra_sp)) +
+  geom_col(position = "dodge", color = "black") +
+  scale_x_continuous(breaks = c(2015, 2016, 2017, 2018, 2019, 2020)) +
+  theme(legend.position = "bottom") +
+  labs(title = "Kazalnik 3: Prehodnost študentov iz 1. v 2. letnik",
+       subtitle = "",
+       x = "",
+       y = "Vrednost v %",
+       fill = "Študijski program")
+
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+k3_prehod_02_03 <- k3_clean %>% 
+  select(sifra_kazalnika, kazalnik, fakulteta, sifra_sp, program, nacin_studija, procent, leto) %>%
+  filter(nacin_studija != "Izredni", fakulteta == "FF") %>% 
+  filter(sifra_kazalnika == "P03-04" & (sifra_sp == prjName)) %>% 
+  select(-fakulteta)
+
+k3_prehod_02_03 %>% 
+  kbl() %>% kable_classic(full_width = T, html_font = "Cambria") 
+
+k3_clean %>% 
+  select(sifra_kazalnika, kazalnik, fakulteta, sifra_sp, program, nacin_studija, procent, leto) %>%
+  filter(nacin_studija != "Izredni", fakulteta == "FF") %>% 
+  filter(sifra_kazalnika == "P03-04" & (sifra_sp == prjName)) %>% 
+  ggplot(aes(leto, procent, fill = sifra_sp)) +
+  geom_col(position = "dodge", color = "black") +
+  scale_x_continuous(breaks = c(2015, 2016, 2017, 2018, 2019, 2020)) +
+  theme(legend.position = "bottom") +
+  labs(title = "Kazalnik 3: Prehodnost študentov iz 2. v 3. letnik",
+       subtitle = "",
+       x = "",
+       y = "Vrednost v %",
+       fill = "Študijski program")
+
+```
+
+
+# Kazalnik 4: Diplomanti
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# k4_clean <- read_xlsx("data/UM_KIZ skupno FF_.xlsx", 
+k4_clean <- read_xlsx(kazal, 
+                 sheet = "Kazalnik 4") %>% 
+  clean_names() %>% 
+  mutate(kratek_naziv_studijskega_programa_sp = 
+           str_to_sentence(kratek_naziv_studijskega_programa_sp)) %>% 
+  rename(program = kratek_naziv_studijskega_programa_sp,
+         procent = vrednost_v_percent) %>% 
+  mutate(leto = as.integer(leto))
+
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+k4_diplomanti <- k4_clean %>% 
+  select(sifra_kazalnika, kazalnik, fakulteta, sifra_sp, program, nacin_studija, procent, leto) %>%
+  filter(nacin_studija != "Izredni", fakulteta == "FF") %>% 
+  filter(sifra_kazalnika != "P04-04" & (sifra_sp == prjName)) %>% 
+  select(-fakulteta)
+
+k4_diplomanti %>% 
+  kbl() %>% kable_classic(full_width = T, html_font = "Cambria")
+
+k4_clean %>% 
+  select(sifra_kazalnika, kazalnik, fakulteta, sifra_sp, program, nacin_studija, procent, leto) %>%
+  filter(nacin_studija != "Izredni", fakulteta == "FF") %>% 
+  filter(sifra_kazalnika != "P04-04" & (sifra_sp == prjName)) %>% 
+  ggplot(aes(leto, procent, fill = sifra_sp)) +
+  geom_col(position = "dodge", color = "black") +
+  # geom_smooth(method = "loess") +
+  scale_x_continuous(breaks = c(2015, 2016, 2017, 2018, 2019, 2020)) +
+  theme(legend.position = "bottom") +
+  labs(title = "Kazalnik 4: Diplomanti v roku",
+       subtitle = "",
+       x = "",
+       y = "Vrednost v %",
+       fill = "Študijski program")
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+k4_feb2022_clean <- read_xlsx("data/UM-KIZ-2022_FF_februar.xlsx", 
+                 sheet = "Kazalnik 4") %>% 
+  clean_names() %>% 
+  mutate(akreditiran_naziv_sp = 
+           str_to_sentence(akreditiran_naziv_sp)) %>% 
+  rename(program = akreditiran_naziv_sp,
+         procent = vrednost_v_percent) %>% 
+  mutate(leto = as.integer(2021))
+
+k4_feb2022_diplomanti <- k4_feb2022_clean %>% 
+  select(sifra_kazalnika, kazalnik, fakulteta, sifra_sp, program, nacin_studija, procent, leto) %>%
+  filter(nacin_studija != "Izredni", fakulteta == "FF") %>% 
+  filter(sifra_kazalnika != "P04-04" & (sifra_sp == prjName)) %>% 
+  select(-fakulteta)
+
+k4_feb2022_diplomanti %>% 
+  kbl() %>% kable_classic(full_width = T, html_font = "Cambria")
+
+k4update <- bind_rows(k4_clean, k4_feb2022_clean)
+
+k4update %>% 
+  select(sifra_kazalnika, kazalnik, fakulteta, sifra_sp, program, 
+         nacin_studija, procent, leto) %>%
+  filter(nacin_studija != "Izredni", fakulteta == "FF") %>% 
+  filter(sifra_kazalnika != "P04-04" & (sifra_sp == prjName)) %>% 
+  kbl() %>% 
+  kable_classic(full_width = T, html_font = "Cambria")
+
+# k4_clean %>% 
+k4update %>% 
+  select(sifra_kazalnika, kazalnik, fakulteta, sifra_sp, program, nacin_studija, procent, leto) %>%
+  filter(nacin_studija != "Izredni", fakulteta == "FF") %>% 
+  filter(sifra_kazalnika != "P04-04" & (sifra_sp == prjName)) %>% 
+  ggplot(aes(leto, procent, fill = sifra_sp)) +
+  geom_col(position = "dodge", color = "black") +
+  # geom_smooth(method = "loess") +
+  scale_x_continuous(breaks = c(2015, 2016, 2017, 2018, 2019, 2020)) +
+  theme(legend.position = "bottom") +
+  labs(title = "Kazalnik 4: Diplomanti v roku",
+       subtitle = "Dodan podatek za generacijo 2017 (Februar 2022)",
+       x = "",
+       y = "Vrednost v %",
+       fill = "Študijski program")
+
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+k4_tranjanje_studija <- k4_clean %>% 
+  select(sifra_kazalnika, kazalnik, fakulteta, sifra_sp, program, nacin_studija, procent, leto) %>%
+  rename(trajanje = procent) %>% 
+  filter(nacin_studija != "Izredni", fakulteta == "FF") %>% 
+  filter(sifra_kazalnika == "P04-04" & (sifra_sp == prjName)) %>% 
+  select(-fakulteta)
+
+k4_tranjanje_studija %>% 
+  kbl() %>% kable_classic(full_width = T, html_font = "Cambria")
+
+k4_clean %>% 
+  select(sifra_kazalnika, kazalnik, fakulteta, sifra_sp, program, nacin_studija, procent, leto) %>%
+  filter(nacin_studija != "Izredni", fakulteta == "FF") %>% 
+  filter(sifra_kazalnika == "P04-04" & (sifra_sp == prjName)) %>% 
+  ggplot(aes(leto, procent, fill = sifra_sp)) +
+  geom_col(position = "dodge", color = "black") +
+  # geom_smooth(method = "loess") +
+  scale_x_continuous(breaks = c(2015, 2016, 2017, 2018, 2019, 2020)) +
+  theme(legend.position = "bottom") +
+  labs(title = "Kazalnik 4: Povprečno število let trajanja študija",
+       subtitle = "",
+       x = "",
+       y = "Vrednost v letih",
+       fill = "Študijski program")
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+k4_feb2022_clean <- read_xlsx("data/UM-KIZ-2022_FF_februar.xlsx", 
+                 sheet = "Kazalnik 4") %>% 
+  clean_names() %>% 
+  mutate(akreditiran_naziv_sp = 
+           str_to_sentence(akreditiran_naziv_sp)) %>% 
+  rename(program = akreditiran_naziv_sp,
+         procent = vrednost_v_percent) %>% 
+  mutate(leto = as.integer(2021))
+
+k4_tranjanje_studija <- k4_feb2022_clean %>% 
+  select(sifra_kazalnika, kazalnik, fakulteta, sifra_sp, program, nacin_studija, procent, leto) %>%
+  filter(nacin_studija != "Izredni", fakulteta == "FF") %>% 
+  filter(sifra_kazalnika == "P04-04" & (sifra_sp == prjName)) %>% 
+  select(-fakulteta)
+
+k4_tranjanje_studija %>% 
+  kbl() %>% kable_classic(full_width = T, html_font = "Cambria")
+
+k4update <- bind_rows(k4_clean, k4_feb2022_clean)
+
+k4update %>% 
+  select(sifra_kazalnika, kazalnik, fakulteta, sifra_sp, program, 
+         nacin_studija, procent, leto) %>%
+  filter(nacin_studija != "Izredni", fakulteta == "FF") %>% 
+  filter(sifra_kazalnika == "P04-04" & (sifra_sp == prjName)) %>% 
+  kbl() %>% 
+  kable_classic(full_width = T, html_font = "Cambria")
+
+# k4_clean %>% 
+k4update %>% 
+    select(sifra_kazalnika, kazalnik, fakulteta, sifra_sp, program, nacin_studija, procent, leto) %>%
+  filter(nacin_studija != "Izredni", fakulteta == "FF") %>% 
+  filter(sifra_kazalnika == "P04-04" & (sifra_sp == prjName)) %>% 
+  ggplot(aes(leto, procent, fill = sifra_sp)) +
+  geom_col(position = "dodge", color = "black") +
+  # geom_smooth(method = "loess") +
+  scale_x_continuous(breaks = c(2015, 2016, 2017, 2018, 2019, 2020)) +
+  theme(legend.position = "bottom") +
+  labs(title = "Kazalnik 4: Povprečno število let trajanja študija",
+       subtitle = "Dodan podatek za generacijo 2017 (Februar 2022)",
+       x = "",
+       y = "Vrednost v letih",
+       fill = "Študijski program")
+```
+
+
+# Kazalnik 5: Zadovoljstvo študentov
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# k5_clean <- read_xlsx("data/UM_KIZ skupno FF_.xlsx", 
+k5_clean <- read_xlsx(kazal, 
+                 sheet = "Kazalnik 5") %>% 
+  clean_names() %>% 
+  rename(leto = komentar_13) %>% 
+  rename(program = kratek_naziv_studijskega_programa_sp,
+         procent = vrednost_v_percent) %>% 
+  mutate(leto = as.integer(leto))
+
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+k5_zadovoljstvo <- k5_clean %>% 
+  select(sifra_kazalnika, kazalnik, fakulteta, sifra_sp, program, 
+         procent, leto) %>%
+  rename(mediana = procent) %>% 
+  filter(sifra_kazalnika == "P05-01" & (sifra_sp == prjName)) %>% 
+  select(-fakulteta)
+
+k5_zadovoljstvo %>% 
+  kbl() %>% kable_classic(full_width = T, html_font = "Cambria")
+
+k5_clean %>% 
+  select(sifra_kazalnika, kazalnik, fakulteta, sifra_sp, program, 
+         procent, leto) %>%
+  filter(sifra_kazalnika == "P05-01" & (sifra_sp == prjName)) %>% 
+  ggplot(aes(leto, procent, fill = sifra_sp)) +
+  geom_col(position = "dodge", color = "black") +
+  # geom_smooth(method = "loess") +
+  scale_x_continuous(breaks = c(2015, 2016, 2017, 2018, 2019, 2020)) +
+  theme(legend.position = "bottom") +
+  labs(title = "Kazalnik 5: Zadovoljstvo študentov",
+       subtitle = "",
+       x = "",
+       y = "Srednja vrednost (mediana)",
+       fill = "Študijski program")
+
+```
+
+
+# Kazalnik 6: Delež diplom v sodelovanju z okoljem
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# k6_clean <- read_xlsx("data/UM_KIZ skupno FF_.xlsx", 
+k6_clean <- read_xlsx(kazal, 
+                 sheet = "Kazalnik 6") %>% 
+  clean_names() %>% 
+  rename(program = kratek_naziv_studijskega_programa_sp,
+         procent = vrednost_v_percent) %>% 
+  mutate(leto = as.integer(leto))
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+k6_diplome_okolje <- k6_clean %>% 
+  select(sifra_kazalnika, kazalnik, fakulteta, sifra_sp, program, nacin_studija, procent, leto) %>%
+  filter(nacin_studija != "Izredni", fakulteta == "FF") %>% 
+  filter(sifra_kazalnika == "P06-01" & (sifra_sp == prjName)) %>% 
+  select(-fakulteta)
+
+k6_diplome_okolje %>% 
+  kbl() %>% kable_classic(full_width = T, html_font = "Cambria")
+
+k6_clean %>% 
+  select(sifra_kazalnika, kazalnik, fakulteta, sifra_sp, program, nacin_studija, procent, leto) %>%
+  filter(nacin_studija != "Izredni", fakulteta == "FF") %>% 
+  filter(sifra_kazalnika == "P06-01" & (sifra_sp == prjName)) %>% 
+  ggplot(aes(leto, procent, fill = sifra_sp)) +
+  geom_col(position = "dodge", color = "black") +
+  # geom_smooth(method = "loess") +
+  scale_x_continuous(breaks = c(2015, 2016, 2017, 2018, 2019, 2020)) +
+  theme(legend.position = "bottom") +
+  labs(title = "Kazalnik 6: Delež diplom v sodelovanju z okoljem",
+       subtitle = "",
+       x = "",
+       y = "Vrednost",
+       fill = "Študijski program")
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+k6_feb2022_clean <- read_xlsx("data/UM-KIZ-2022_FF_februar.xlsx", 
+                 sheet = "Kazalnik 6") %>% 
+  clean_names() %>% 
+  mutate(akreditiran_naziv_sp = 
+           str_to_sentence(akreditiran_naziv_sp)) %>% 
+  rename(program = akreditiran_naziv_sp,
+         procent = vrednost_v_percent) %>% 
+  mutate(leto = as.integer(2021))
+
+k6_diplome_okolje_feb2022 <- k6_feb2022_clean %>% 
+  select(sifra_kazalnika, kazalnik, fakulteta, sifra_sp, program, nacin_studija, procent, leto) %>%
+  filter(nacin_studija != "Izredni", fakulteta == "FF") %>% 
+  filter(sifra_kazalnika == "P06-01" & (sifra_sp == prjName)) %>% 
+  select(-fakulteta)
+
+k6_diplome_okolje_feb2022 %>% 
+  kbl() %>% kable_classic(full_width = T, html_font = "Cambria")
+
+k6_update <- bind_rows(k6_clean, k6_feb2022_clean)
+
+k6_update %>% 
+    select(sifra_kazalnika, kazalnik, fakulteta, sifra_sp, program, nacin_studija, procent, leto) %>%
+  filter(nacin_studija != "Izredni", fakulteta == "FF") %>% 
+  filter(sifra_kazalnika == "P06-01" & (sifra_sp == prjName)) %>% 
+    kbl() %>% kable_classic(full_width = T, html_font = "Cambria")
+
+# k6_clean %>% 
+k6_update %>% 
+    select(sifra_kazalnika, kazalnik, fakulteta, sifra_sp, program, nacin_studija, procent, leto) %>%
+  filter(nacin_studija != "Izredni", fakulteta == "FF") %>% 
+  filter(sifra_kazalnika == "P06-01" & (sifra_sp == prjName)) %>% 
+  ggplot(aes(leto, procent, fill = sifra_sp)) +
+  geom_col(position = "dodge", color = "black") +
+  # geom_smooth(method = "loess") +
+  scale_x_continuous(breaks = c(2015, 2016, 2017, 2018, 2019, 2020)) +
+  theme(legend.position = "bottom") +
+  labs(title = "Kazalnik 6: Delež diplom v sodelovanju z okoljem",
+       subtitle = "",
+       x = "",
+       y = "Vrednost",
+       fill = "Študijski program")
+
+```
+
+
+# Kazalnik 9: Delež diplom tujih državljanov
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# k9_clean <- read_xlsx("data/UM_KIZ skupno FF_.xlsx", 
+k9_clean <- read_xlsx(kazal, 
+                 sheet = "Kazalnik 9") %>% 
+  clean_names() %>% 
+  rename(program = kratek_naziv_studijskega_programa_sp,
+         procent = vrednost_v_percent) %>% 
+  mutate(leto = as.integer(leto))
+```
+
+
+```{r fig.width=10}
+k9_diplome_tujci <- k9_clean %>% 
+  select(sifra_kazalnika, kazalnik, fakulteta, sifra_sp, program, nacin_studija, procent, leto) %>%
+  filter(nacin_studija != "Izredni", fakulteta == "FF") %>% 
+  filter(sifra_kazalnika == "P09-01" & (sifra_sp == prjName)) %>% 
+  select(-fakulteta)
+
+k9_diplome_tujci %>% 
+  kbl() %>% kable_classic(full_width = T, html_font = "Cambria")
+
+k9_clean %>% 
+  select(sifra_kazalnika, kazalnik, fakulteta, sifra_sp, program, nacin_studija, procent, leto) %>%
+  filter(nacin_studija != "Izredni", fakulteta == "FF") %>% 
+  filter(sifra_kazalnika == "P09-01" & (sifra_sp == prjName)) %>% 
+  ggplot(aes(leto, procent, fill = sifra_sp)) +
+  geom_col(position = "dodge", color = "black", show.legend = F) +
+  # geom_smooth(method = "loess") +
+  scale_x_continuous(breaks = c(2015, 2016, 2017, 2018, 2019, 2020)) +
+  theme(legend.position = "bottom") +
+  labs(title = "Kazalnik 9: Delež diplom tujih državljanov",
+       subtitle = "",
+       x = "",
+       y = "Vrednost v %",
+       fill = "Študijski program") #+
+  # facet_wrap(~ sifra_sp)
+
+```
+
+
+```{r fig.width=10}
+k9_vpis_tujcev <- k9_clean %>% 
+  select(sifra_kazalnika, kazalnik, fakulteta, sifra_sp, program, nacin_studija, procent, leto) %>%
+  filter(nacin_studija != "Izredni", fakulteta == "FF") %>% 
+  filter(sifra_kazalnika == "P09-04" & (sifra_sp == prjName)) %>% 
+  select(-fakulteta)
+
+k9_vpis_tujcev %>% 
+  kbl() %>% kable_classic(full_width = T, html_font = "Cambria")
+
+k9_clean %>% 
+  select(sifra_kazalnika, kazalnik, fakulteta, sifra_sp, program, nacin_studija, procent, leto) %>%
+  filter(nacin_studija != "Izredni", fakulteta == "FF") %>% 
+  filter(sifra_kazalnika == "P09-04" & (sifra_sp == prjName)) %>% 
+  ggplot(aes(leto, procent, fill = sifra_sp)) +
+  geom_col(position = "dodge", color = "black", show.legend = F) +
+  # geom_smooth(method = "loess") +
+  scale_x_continuous(breaks = c(2015, 2016, 2017, 2018, 2019, 2020)) +
+  theme(legend.position = "bottom") +
+  labs(title = "Kazalnik 9: Delež tujih državljanov vpisanih na študijske programe",
+       subtitle = "",
+       x = "",
+       y = "Vrednost v %",
+       fill = "Študijski program") #+
+  # facet_wrap(~ sifra_sp)
+
+```

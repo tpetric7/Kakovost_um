@@ -1,0 +1,202 @@
+---
+title: "Večkratno opravljanje izpitov (število pristopov > 3)"
+author: "Teodor Petrič"
+date: "`r format(Sys.time(), '%Y-%m-%d')`"
+output:
+  html_document:
+    toc: yes
+    toc_float: yes
+    css: test.css
+    highlight: espresso
+    theme: paper
+    fig_caption: yes
+  pdf_document:
+    toc: yes
+  word_document:
+    toc: yes
+    highlight: tango
+    fig_caption: yes
+always_allow_html: yes
+params:
+  sifra_sp:
+    label: 'Študijska smer:'
+    value: GERE
+    input: select
+    choices:
+    - Univerza
+    - FILOZOFSKA
+    - 11AN
+    - 11GE
+    - 11PE
+    - 11FL
+    - 11ZG
+    - 11UZ
+    - ZGOE
+    - SOCE
+    - SLOE
+    - PSIE
+    - GERE
+    - 11SL
+    - 11SC
+    - 11NE
+    - 11MN
+    - 11MA
+    - 22YA
+    - 22YB
+    - 22YC
+    - 22YD
+    - 22YE
+    - 22YF
+    - 22YH
+    - 22YI
+    - 22YJ
+    - 22YK
+    - 22YL
+    - 22YM
+    - 22YO
+    - 22YR
+    - XPXA
+    - XNXB
+    - XNXC
+    - XNXE
+    - XNXF
+    - XNXH
+    - XNXJ
+---
+
+Version 1 (2021-01-13)
+
+Version 2 (2021-12-29)
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = FALSE,
+	message = FALSE,
+	warning = FALSE
+)
+library(tidyverse)
+library(scales)
+library(readxl)
+library(janitor)
+library(kableExtra)
+theme_set(theme_light())
+
+```
+
+Excelov zvezek: 
+"data/FF_Četrto in vsako nadaljnje opravljanje izpita.xlsx"
+
+```{r echo=FALSE}
+veckrat <- "data/FF-četrto in vsako nadaljnje opravljanje izpita.xlsx"
+```
+
+Šifra študijskega programa (*yaml*):
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+readname = function()# Get the project name
+{
+  params$sifra_sp
+}
+prjName=readname()
+prjName
+```
+
+
+```{r}
+# ponovni_izpiti_clean <- read_xlsx("data2019/Neuspešno opravljanje izpitov-FF.xlsx", skip = 6) %>%
+ponovni_izpiti_clean <- read_xlsx(veckrat,
+                                  skip = 6) %>%
+  clean_names() %>%
+  mutate(stevilo_pristopov = as.numeric(stevilo_pristopov)) %>% 
+  mutate(naziv_ue = str_to_sentence(naziv_ue)) %>% 
+  mutate(nosilec_izpita = str_to_title(nosilec_izpita)) 
+
+```
+
+
+```{r}
+ponovni_izpiti_clean %>% 
+    count(nosilec_izpita, sort = T) %>% 
+  kbl() %>% kable_classic(full_width = F, html_font = "Cambria") %>% add_footnote("NA = Podatkov o drugih fakultetah ni")
+
+```
+
+```{r}
+ponovni_izpiti_clean %>% 
+  filter(nosilec_izpita != "") %>% 
+  count(nosilec_izpita = fct_lump(nosilec_izpita, 10, w = stevilo_pristopov, other_level = "preostali"), sort = T) %>% 
+  filter(nosilec_izpita != "preostali") %>% 
+  mutate(nosilec_izpita = fct_reorder(nosilec_izpita, n)) %>% 
+  ggplot(aes(n, nosilec_izpita, fill = nosilec_izpita)) +
+  geom_col(show.legend = F)
+
+```
+
+```{r}
+ponovni_izpiti_clean %>% 
+  filter(fakulteta_ue != "") %>% 
+  count(fakulteta_ue = fct_lump(fakulteta_ue, 10, w = stevilo_pristopov, other_level = "preostali"), sort = T) %>% 
+  filter(fakulteta_ue != "preostali") %>% 
+  mutate(fakulteta_ue = fct_reorder(fakulteta_ue, n)) %>% 
+  ggplot(aes(n, fakulteta_ue, fill = fakulteta_ue)) +
+  geom_col(show.legend = F)
+
+```
+
+
+```{r}
+ponovni_izpiti_clean %>% 
+  filter(fakulteta_ue == "FF") %>% 
+    count(nosilec_izpita, sort = T) %>% 
+  kbl() %>% kable_classic(full_width = F, html_font = "Cambria") %>% add_footnote("Podatki za FF")
+
+```
+
+```{r}
+ponovni_izpiti_clean %>% 
+  filter(fakulteta_ue == "FF") %>% 
+  count(nosilec_izpita = fct_lump(nosilec_izpita, 6, w = stevilo_pristopov, other_level = "preostali"), sort = T) %>% 
+  mutate(nosilec_izpita = fct_reorder(nosilec_izpita, n)) %>% 
+  ggplot(aes(n, nosilec_izpita, fill = nosilec_izpita)) +
+  geom_col(show.legend = F)
+
+```
+
+```{r}
+ponovni_izpiti_clean %>% 
+  filter(fakulteta_ue == "FF") %>% 
+  count(naziv_ue = fct_lump(naziv_ue, 10, w = stevilo_pristopov, 
+                            other_level = "preostali"), sort = T) %>% 
+  mutate(naziv_ue = fct_reorder(naziv_ue, n)) %>% 
+  ggplot(aes(n, naziv_ue, fill = naziv_ue)) +
+  geom_col(show.legend = F)
+
+```
+
+
+```{r}
+ponovni_izpiti_clean %>% 
+  filter(fakulteta_ue == "FF") %>% 
+  count(naziv_sp, sort = T) %>% 
+  kbl() %>% kable_classic(full_width = F, html_font = "Cambria") %>% add_footnote("Število izpitov s pristopi > 3")
+
+```
+
+
+```{r}
+ponovni_izpiti_clean %>% 
+  filter(fakulteta_ue == "FF") %>% 
+  count(naziv_sp, stevilo_pristopov, sort = F) %>% 
+  kbl() %>% kable_classic(full_width = F, html_font = "Cambria") %>% add_footnote("Število izpitov s pristopi > 3")
+
+```
+
+```{r}
+ponovni_izpiti_clean %>% 
+  filter(fakulteta_ue == "FF") %>% 
+  count(naziv_sp, vpisna_stevilka, sort = F) %>% 
+  kbl() %>% kable_classic(full_width = F, html_font = "Cambria") %>% add_footnote("Študenti s pristopi > 3")
+
+```
+

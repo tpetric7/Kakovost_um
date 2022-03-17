@@ -1,0 +1,3371 @@
+---
+title: "Zadovoljstvo studentov"
+author: "Teodor Petrič"
+date: "`r format(Sys.time(), '%Y-%m-%d')`"
+output:
+  html_document:
+    toc: yes
+    toc_float: yes
+    css: test.css
+    highlight: espresso
+    theme: paper
+    fig_caption: yes
+  pdf_document:
+    toc: yes
+  word_document:
+    toc: yes
+    highlight: tango
+    fig_caption: yes
+always_allow_html: yes
+params:
+  sifra_sp:
+    label: 'Študijska smer:'
+    value: GERE
+    input: select
+    choices:
+    - Univerza
+    - FILOZOFSKA
+    - 11AN
+    - 11GE
+    - 11PE
+    - 11FL
+    - 11ZG
+    - 11UZ
+    - ZGOE
+    - SOCE
+    - SLOE
+    - PSIE
+    - GERE
+    - 11SL
+    - 11SC
+    - 11NE
+    - 11MN
+    - 11MA
+    - 22YA
+    - 22YB
+    - 22YC
+    - 22YD
+    - 22YE
+    - 22YF
+    - 22YH
+    - 22YI
+    - 22YJ
+    - 22YK
+    - 22YL
+    - 22YM
+    - 22YO
+    - 22YR
+    - XPXA
+    - XNXB
+    - XNXC
+    - XNXE
+    - XNXF
+    - XNXH
+    - XNXJ
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = FALSE,
+	message = FALSE,
+	warning = FALSE
+)
+library(tidyverse)
+library(scales)
+library(readxl)
+library(janitor)
+
+library(kableExtra)
+library(reactable)
+library(flextable)
+library(DT)
+
+theme_set(theme_light())
+
+```
+
+Version 2: "2021-12-28" 
+
+Excelova datoteka: FF-AnketaOZadovoljstvu20_21.xlsx
+
+```{r}
+zadovoljstvo_vprasalniki <- "data/FF-AnketaOZadovoljstvu20_21.xlsx"
+zadovoljstvo_vprasalniki
+
+zadovoljstvo_kazalo <- readxl::read_xlsx(zadovoljstvo_vprasalniki,
+                                         sheet = "Kazalo-seznam",
+                                         skip = 3)
+```
+
+
+```{r}
+# zadovoljstvo_vprasalniki <- file.choose()
+# zadovoljstvo_kazalo <- 
+#   readxl::read_xlsx(zadovoljstvo_vprasalniki, 
+#                     sheet = "Kazalo-seznam", skip = 3) 
+# 
+```
+
+
+# Kazalo
+
+```{r}
+zadovoljstvo_kazalo %>% kbl() %>% kable_classic(full_width = T, html_font = "Cambria")
+
+```
+
+
+## User input
+
+Šifra študijskega programa (*yaml*):
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+readname = function()# Get the project name
+{
+  params$sifra_sp
+}
+prjName=readname()
+prjName
+```
+
+
+User input from keyboard: Choose programme!
+
+```{r}
+# sifre_sp <- c("Univerza", "FILOZOFSKA", "11AN", "11FL", "11GE", "11MA", "11MN", "11NE", "11PE", "11SC", "11SL", "11UZ", "11ZG", "ZGOE", "SOCE", "SLOE", "PSIE", "GERE", "22YA", "22YB", "22YC", "22YD", "22YE", "22YF", "22YH", "22YI", "22YJ", "22YK", "22YL", "22YM", "22YO", "22YR", "XPXA", "XNXB", "XNXC", "XNXE", "XNXF", "XNXH", "XNXJ")
+# 
+# prjName <- readline(prompt = cat("Izberite šifro študijskega programa (samo velike črke):\n\n", sifre_sp))
+# prjName <- as.character(prjName)
+
+```
+
+
+# B1. Demografski podatki
+
+```{r}
+zadovoljstvo_b1 <- 
+  readxl::read_xlsx(zadovoljstvo_vprasalniki, 
+                                     sheet = "B1.", skip = 4) %>% 
+  clean_names() %>% 
+  mutate(m = str_replace(m, ",", "."),
+         z = str_replace(z, ",", "."),
+         slovensko = str_replace(slovensko, ",", "."),
+         drugo = str_replace(drugo, ",", "."),
+         redni = str_replace(redni, ",", "."),
+         izredni = str_replace(izredni, ",", "."),
+         starost_ob_zakljucku_studija = str_replace(starost_ob_zakljucku_studija, ",", "."),
+         trajanje_studija_v_mesecih = str_replace(trajanje_studija_v_mesecih, ",", "."),
+         povprecne_ocene = str_replace(povprecne_ocene, ",", "."),
+         na_um = str_replace(na_um, ",", "."),
+         drugje = str_replace(drugje, ",", ".")) %>% 
+  separate(studijski_program_institucija, 
+           into = c("sifra_sp", "studijski_program_institucija"), 
+           sep = " ", remove = F, extra = "merge") %>% 
+  mutate(studijski_program_institucija = 
+           str_to_sentence(studijski_program_institucija)) %>%
+  mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "V mariboru", "Univerza v Mariboru")) %>%
+  mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "Fakulteta", "Filozofska fakulteta")) %>%
+  mutate(across(m:ne_zelim_odgovoriti, ~ as.numeric(str_replace(.x, ",", "."))))
+
+```
+
+```{r}
+write.table(zadovoljstvo_b1, "data/zadovoljstvo_b1.txt", sep = "\t", dec = ".", fileEncoding = "UTF-8", row.names = F)
+zadovoljstvo_b1 <- read.table("data/zadovoljstvo_b1.txt", header = T, sep = "\t", dec = ".", fileEncoding = "UTF-8")
+
+```
+
+
+```{r}
+zadovoljstvo_b1 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>% 
+  kbl() %>% kable_classic(full_width = T, html_font = "Cambria")
+
+```
+
+```{r}
+povzetek_b1 <- function(tbl){
+  tbl %>% 
+    summarise(total = sum(stevilo_anketirancev), 
+              moski = sum(m*stevilo_anketirancev/total),
+              zenske = sum(z*stevilo_anketirancev/total),
+              sloven = sum(slovensko*stevilo_anketirancev/total),
+              ocena = sum(povprecne_ocene*stevilo_anketirancev/total))
+}
+
+```
+
+
+```{r}
+zadovoljstvo_b1 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>% 
+  povzetek_b1() %>% 
+  kbl() %>% kable_classic(full_width = T, html_font = "Cambria") %>% add_footnote(prjName)
+  
+```
+
+
+# B2. Sodelovanje studentov v projektih, na konferencah ipd.
+
+```{r}
+zadovoljstvo_b2 <- readxl::read_xlsx(zadovoljstvo_vprasalniki, sheet = "B2.", skip = 3) %>% 
+  clean_names() %>% 
+  separate(studijski_program_institucija, 
+           into = c("sifra_sp", "studijski_program_institucija"), 
+           sep = " ", remove = F, extra = "merge") %>% 
+  mutate(studijski_program_institucija = 
+           str_to_sentence(studijski_program_institucija)) %>% 
+    mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "V mariboru", "Univerza v Mariboru")) %>%
+  mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "Fakulteta", "Filozofska fakulteta")) %>% 
+  mutate(across(da:standardni_odklon_povprecne_vrednosti_za_odgovor_da_v_mesecih, ~ as.numeric(str_replace(.x, ",", "."))))
+
+```
+
+```{r}
+write.table(zadovoljstvo_b2, "data/zadovoljstvo_b2.txt", sep = "\t", dec = ",", fileEncoding = "UTF-8", row.names = F)
+zadovoljstvo_b2 <- read.table("data/zadovoljstvo_b2.txt", header = T, sep = "\t", dec = ",", fileEncoding = "UTF-8")
+
+```
+
+
+```{r}
+povzetek_b2 <- function(tbl){
+  tbl %>% 
+    summarise(total = sum(stevilo_odgovorov),
+              sodeloval = sum(da*stevilo_odgovorov/100),
+              ni_sodeloval = sum(ne*stevilo_odgovorov/100),
+              ne_zelim = sum(ne_zelim_odgovoriti*stevilo_odgovorov/100),
+              avg_meseci = sum(
+                povprecna_vrednost_za_odgovor_da_v_mesecih/sodeloval, na.rm = T),
+              sd_meseci = sum(standardni_odklon_povprecne_vrednosti_za_odgovor_da_v_mesecih/sodeloval, 
+                              na.rm = T))
+  }
+
+```
+
+
+```{r}
+zadovoljstvo_b2 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>% 
+  kbl() %>% kable_classic(full_width = T, html_font = "Cambria") %>% add_footnote(prjName)
+
+zadovoljstvo_b2 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>% 
+  povzetek_b2() %>% 
+  kbl() %>% kable_classic(full_width = T, html_font = "Cambria") %>% add_footnote(prjName)
+
+```
+
+
+```{r}
+zadovoljstvo_b2 %>% 
+  group_by(sifra_sp) %>%
+  filter(str_detect(sifra_sp, prjName)) %>% 
+  povzetek_b2() %>% 
+  mutate(sifra_sp = fct_reorder(sifra_sp, sodeloval)) %>% 
+  ggplot(aes(sodeloval, sifra_sp, fill = sifra_sp)) +
+  geom_col(show.legend = F) +
+  labs(title = "B2. Sodelovanje: demonstratorstvo, projekti, konference: 11NE/GERE")
+
+zadovoljstvo_b2 %>% 
+  group_by(sifra_sp) %>% 
+  filter(str_detect(sifra_sp, prjName)) %>% 
+  povzetek_b2() %>% 
+  mutate(sifra_sp = fct_reorder(sifra_sp, avg_meseci)) %>% 
+  ggplot(aes(avg_meseci, sifra_sp, fill = sifra_sp)) +
+  geom_col(show.legend = F) +
+  labs(title = "B2. Sodelovanje: demonstratorstvo, projekti, konference: 11NE/GERE")
+
+```
+
+
+# B3. Obštudijske dejavnosti
+
+```{r}
+zadovoljstvo_b3 <- readxl::read_xlsx(zadovoljstvo_vprasalniki, sheet = "B3.", skip = 3) %>% 
+  clean_names() %>% 
+  separate(studijski_program_institucija, 
+           into = c("sifra_sp", "studijski_program_institucija"), 
+           sep = " ", remove = F, extra = "merge") %>% 
+  mutate(studijski_program_institucija = 
+           str_to_sentence(studijski_program_institucija)) %>% 
+    mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "V mariboru", "Univerza v Mariboru")) %>%
+  mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "Fakulteta", "Filozofska fakulteta")) %>% 
+  mutate(across(da:standardni_odklon_povprecne_vrednosti_za_odgovor_da_v_mesecih, ~ as.numeric(str_replace(.x, ",", "."))))
+
+```
+
+```{r}
+write.table(zadovoljstvo_b3, "data/zadovoljstvo_b3.txt", sep = "\t", dec = ",", fileEncoding = "UTF-8", row.names = F)
+zadovoljstvo_b3 <- read.table("data/zadovoljstvo_b3.txt", header = T, sep = "\t", dec = ",", fileEncoding = "UTF-8")
+
+```
+
+avg_meseci in avg_sd v povzetku nista pravilna.
+
+```{r}
+zadovoljstvo_b3 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>% 
+  kbl() %>% kable_classic(full_width = T, html_font = "Cambria") %>% add_footnote(prjName)
+
+zadovoljstvo_b3 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>% 
+  povzetek_b2() %>% 
+  kbl() %>% kable_classic(full_width = T, html_font = "Cambria") %>% add_footnote(prjName)
+
+
+```
+
+
+```{r}
+zadovoljstvo_b3 %>% 
+  group_by(sifra_sp) %>% 
+  filter(str_detect(sifra_sp, prjName)) %>% 
+  povzetek_b2() %>% 
+  mutate(sifra_sp = fct_reorder(sifra_sp, sodeloval)) %>% 
+  ggplot(aes(sodeloval, sifra_sp, fill = sifra_sp)) +
+  geom_col(show.legend = F) +
+  labs(title = "B3. Obštudijske dejavnosti: 11NE")
+
+zadovoljstvo_b3 %>% 
+  group_by(sifra_sp) %>% 
+  filter(str_detect(sifra_sp, prjName)) %>% 
+  povzetek_b2() %>% 
+  mutate(sifra_sp = fct_reorder(sifra_sp, avg_meseci)) %>% 
+  ggplot(aes(avg_meseci, sifra_sp, fill = sifra_sp)) +
+  geom_col(show.legend = F) +
+  labs(title = "B3. Obštudijske dejavnosti: 11NE")
+
+```
+
+
+# B4. Študijske izmenjave
+
+```{r}
+zadovoljstvo_b4 <- readxl::read_xlsx(zadovoljstvo_vprasalniki, sheet = "B4.", skip = 3) %>% 
+  clean_names() %>% 
+  separate(studijski_program_institucija, 
+           into = c("sifra_sp", "studijski_program_institucija"), 
+           sep = " ", remove = F, extra = "merge") %>% 
+  mutate(studijski_program_institucija = 
+           str_to_sentence(studijski_program_institucija)) %>% 
+    mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "V mariboru", "Univerza v Mariboru")) %>%
+  mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "Fakulteta", "Filozofska fakulteta")) %>% 
+  mutate(across(da:standardni_odklon_povprecne_vrednosti_za_odgovor_da_v_mesecih, ~ as.numeric(str_replace(.x, ",", "."))))
+
+```
+
+```{r}
+write.table(zadovoljstvo_b4, "data/zadovoljstvo_b4.txt", sep = "\t", dec = ",", fileEncoding = "UTF-8", row.names = F)
+zadovoljstvo_b4 <- read.table("data/zadovoljstvo_b4.txt", header = T, sep = "\t", dec = ",", fileEncoding = "UTF-8")
+
+```
+
+
+```{r}
+zadovoljstvo_b4 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>% 
+  kbl() %>% kable_classic(full_width = T, html_font = "Cambria") %>% add_footnote(prjName)
+
+zadovoljstvo_b4 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>% 
+  povzetek_b2() %>% 
+  kbl() %>% kable_classic(full_width = T, html_font = "Cambria") %>% add_footnote(prjName)
+
+```
+
+
+```{r}
+zadovoljstvo_b4 %>% 
+  group_by(sifra_sp) %>% 
+  filter(str_detect(sifra_sp, prjName)) %>% 
+  povzetek_b2() %>% 
+  mutate(sifra_sp = fct_reorder(sifra_sp, sodeloval)) %>% 
+  ggplot(aes(sodeloval, sifra_sp, fill = sifra_sp)) +
+  geom_col(show.legend = F) +
+  labs(title = "B4. Študijska izmenjava ali praksa med študijem")
+
+zadovoljstvo_b4 %>% 
+  group_by(sifra_sp) %>% 
+  filter(str_detect(sifra_sp, prjName)) %>% 
+  povzetek_b2() %>% 
+  mutate(sifra_sp = fct_reorder(sifra_sp, avg_meseci)) %>% 
+  ggplot(aes(avg_meseci, sifra_sp, fill = sifra_sp)) +
+  geom_col(show.legend = F) +
+  labs(title = "B4. Študijska izmenjava ali praksa med študijem")
+
+```
+
+
+# B5. Funkcije
+
+```{r}
+zadovoljstvo_b5 <- readxl::read_xlsx(zadovoljstvo_vprasalniki, sheet = "B5.", skip = 3) %>% 
+  clean_names() %>% 
+  separate(studijski_program_institucija, 
+           into = c("sifra_sp", "studijski_program_institucija"), 
+           sep = " ", remove = F, extra = "merge") %>% 
+  mutate(studijski_program_institucija = 
+           str_to_sentence(studijski_program_institucija)) %>% 
+    mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "V mariboru", "Univerza v Mariboru")) %>%
+  mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "Fakulteta", "Filozofska fakulteta")) %>% 
+  mutate(across(da:standardni_odklon_povprecne_vrednosti_za_odgovor_da_v_mesecih, ~ as.numeric(str_replace(.x, ",", "."))))
+
+```
+
+```{r}
+write.table(zadovoljstvo_b5, "data/zadovoljstvo_b5.txt", sep = "\t", dec = ",", fileEncoding = "UTF-8", row.names = F)
+zadovoljstvo_b5 <- read.table("data/zadovoljstvo_b5.txt", header = T, sep = "\t", dec = ",", fileEncoding = "UTF-8")
+
+```
+
+1. stopnja
+
+```{r}
+zadovoljstvo_b5 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>% 
+  kbl() %>% kable_classic(full_width = T, html_font = "Cambria") %>% add_footnote(prjName)
+
+zadovoljstvo_b5 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>% 
+  povzetek_b2() %>% 
+  kbl() %>% kable_classic(full_width = T, html_font = "Cambria") %>% add_footnote(prjName)
+
+```
+
+
+```{r}
+zadovoljstvo_b5 %>% 
+  group_by(sifra_sp) %>% 
+  filter(str_detect(sifra_sp, prjName)) %>% 
+  povzetek_b2() %>% 
+  mutate(sifra_sp = fct_reorder(sifra_sp, sodeloval)) %>% 
+  ggplot(aes(sodeloval, sifra_sp, fill = sifra_sp)) +
+  geom_col(show.legend = F) +
+  labs(title = "B5. Funkcija predstavnika med študijem ipd.")
+
+zadovoljstvo_b5 %>% 
+  group_by(sifra_sp) %>% 
+  filter(str_detect(sifra_sp, prjName)) %>% 
+  povzetek_b2() %>% 
+  mutate(sifra_sp = fct_reorder(sifra_sp, avg_meseci)) %>% 
+  ggplot(aes(avg_meseci, sifra_sp, fill = sifra_sp)) +
+  geom_col(show.legend = F) +
+  labs(title = "B5. Funkcija predstavnika med študijem ipd.")
+
+```
+
+
+# B6.1 Vloženo delo za izpit
+
+```{r}
+zadovoljstvo_b6_1 <- readxl::read_xlsx(zadovoljstvo_vprasalniki, sheet = "B6.1.", skip = 3) %>% 
+  clean_names() %>% 
+  separate(studijski_program_institucija, 
+           into = c("sifra_sp", "studijski_program_institucija"), 
+           sep = " ", remove = F, extra = "merge") %>% 
+  mutate(studijski_program_institucija = 
+           str_to_sentence(studijski_program_institucija)) %>% 
+    mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "V mariboru", "Univerza v Mariboru")) %>%
+  mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "Fakulteta", "Filozofska fakulteta")) %>% 
+  mutate(across(x1_sploh_ne:srednja_vrednost_mediana, ~ as.numeric(str_replace(.x, ",", "."))))
+
+```
+
+```{r}
+write.table(zadovoljstvo_b6_1, "data/zadovoljstvo_b6_1.txt", sep = "\t", dec = ",", fileEncoding = "UTF-8", row.names = F)
+zadovoljstvo_b6_1 <- read.table("data/zadovoljstvo_b6_1.txt", header = T, sep = "\t", dec = ",", fileEncoding = "UTF-8")
+
+```
+
+
+```{r}
+zadovoljstvo_b6_1_11ne <- zadovoljstvo_b6_1 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>%
+  group_by(sifra_sp, stopnja, srednja_vrednost_mediana) %>% 
+  # rename(x9_ne_zelim_odgovoriti = ne_zelim_odgovoriti) %>% 
+  pivot_longer(x1_sploh_ne:ne_zelim_odgovoriti, names_to = "ocena", values_to = "procent") %>% 
+  mutate(ocena = str_extract(ocena, "[\\d]")) 
+kbl(zadovoljstvo_b6_1_11ne) %>% kable_classic(full_width = T, html_font = "Cambria")
+
+library(scales)
+zadovoljstvo_b6_1_11ne %>%
+  ggplot(aes(ocena, procent, fill = ocena)) +
+  geom_col(show.legend = F) +
+  # scale_y_continuous(labels = percent_format()) %>% 
+  geom_vline(xintercept = zadovoljstvo_b6_1_11ne$srednja_vrednost_mediana, 
+             lty=2, cex=1, color = "red") +
+  labs(title = "B6.1. Vlaganje presežne količine dela")
+
+```
+
+
+# B6.2 Prizadevanje za najvišje ocene
+
+```{r}
+zadovoljstvo_b6_2 <- readxl::read_xlsx(zadovoljstvo_vprasalniki, sheet = "B6.2.", skip = 3) %>% 
+  clean_names() %>% 
+  separate(studijski_program_institucija, 
+           into = c("sifra_sp", "studijski_program_institucija"), 
+           sep = " ", remove = F, extra = "merge") %>% 
+  mutate(studijski_program_institucija = 
+           str_to_sentence(studijski_program_institucija)) %>% 
+    mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "V mariboru", "Univerza v Mariboru")) %>%
+  mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "Fakulteta", "Filozofska fakulteta")) %>% 
+  mutate(across(x1_sploh_ne:srednja_vrednost_mediana, ~ as.numeric(str_replace(.x, ",", "."))))
+
+```
+
+```{r}
+write.table(zadovoljstvo_b6_2, "data/zadovoljstvo_b6_2.txt", sep = "\t", dec = ",", fileEncoding = "UTF-8", row.names = F)
+zadovoljstvo_b6_2 <- read.table("data/zadovoljstvo_b6_2.txt", header = T, sep = "\t", dec = ",", fileEncoding = "UTF-8")
+
+```
+
+
+```{r}
+zadovoljstvo_b6_2_11ne <- zadovoljstvo_b6_2 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>%
+  group_by(sifra_sp, stopnja, srednja_vrednost_mediana) %>% 
+  # rename(x9_ne_zelim_odgovoriti = ne_zelim_odgovoriti) %>% 
+  pivot_longer(x1_sploh_ne:ne_zelim_odgovoriti, names_to = "ocena", values_to = "procent") %>% 
+  mutate(ocena = str_extract(ocena, "[\\d]")) 
+kbl(zadovoljstvo_b6_2_11ne) %>% kable_classic(full_width = T, html_font = "Cambria")
+
+library(scales)
+zadovoljstvo_b6_2_11ne %>%
+  ggplot(aes(ocena, procent, fill = ocena)) +
+  geom_col(show.legend = F) +
+  # scale_y_continuous(labels = percent_format()) %>% 
+  geom_vline(xintercept = zadovoljstvo_b6_2_11ne$srednja_vrednost_mediana, 
+             lty=2, cex=1, color = "red") +
+  labs(title = "B6.2. Prizadevanje za najvišje ocene")
+
+```
+
+
+# B6.3 Pripravljenost na PR, SE in vaje
+
+```{r}
+zadovoljstvo_b6_3 <- readxl::read_xlsx(zadovoljstvo_vprasalniki, sheet = "B6.3.", skip = 3) %>% 
+  clean_names() %>% 
+  separate(studijski_program_institucija, 
+           into = c("sifra_sp", "studijski_program_institucija"), 
+           sep = " ", remove = F, extra = "merge") %>% 
+  mutate(studijski_program_institucija = 
+           str_to_sentence(studijski_program_institucija)) %>% 
+    mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "V mariboru", "Univerza v Mariboru")) %>%
+  mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "Fakulteta", "Filozofska fakulteta")) %>% 
+  mutate(across(x1_sploh_ne:srednja_vrednost_mediana, ~ as.numeric(str_replace(.x, ",", "."))))
+
+```
+
+```{r}
+write.table(zadovoljstvo_b6_3, "data/zadovoljstvo_b6_3.txt", sep = "\t", dec = ",", fileEncoding = "UTF-8", row.names = F)
+zadovoljstvo_b6_3 <- read.table("data/zadovoljstvo_b6_3.txt", header = T, sep = "\t", dec = ",", fileEncoding = "UTF-8")
+
+```
+
+
+```{r}
+zadovoljstvo_b6_3_11ne <- zadovoljstvo_b6_3 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>%
+  group_by(sifra_sp, stopnja, srednja_vrednost_mediana) %>% 
+  # rename(x9_ne_zelim_odgovoriti = ne_zelim_odgovoriti) %>% 
+  pivot_longer(x1_sploh_ne:ne_zelim_odgovoriti, names_to = "ocena", values_to = "procent") %>% 
+  mutate(ocena = str_extract(ocena, "[\\d]")) 
+kbl(zadovoljstvo_b6_3_11ne) %>% kable_classic(full_width = T, html_font = "Cambria")
+
+library(scales)
+zadovoljstvo_b6_3_11ne %>%
+  ggplot(aes(ocena, procent, fill = ocena)) +
+  geom_col(show.legend = F) +
+  # scale_y_continuous(labels = percent_format()) %>% 
+  geom_vline(xintercept = zadovoljstvo_b6_3_11ne$srednja_vrednost_mediana, 
+             lty=2, cex=1, color = "red") +
+  labs(title = "B6.3. Pripravljenost na PR, SE in vaje")
+
+```
+
+
+# B7. Povprečno število ur na teden za vse študijske dejavnosti
+
+```{r}
+zadovoljstvo_b7 <- readxl::read_xlsx(zadovoljstvo_vprasalniki, sheet = "B7.", skip = 3) %>% 
+  clean_names() %>% 
+  separate(studijski_program_institucija, 
+           into = c("sifra_sp", "studijski_program_institucija"), 
+           sep = " ", remove = F, extra = "merge") %>% 
+  mutate(studijski_program_institucija = 
+           str_to_sentence(studijski_program_institucija)) %>% 
+    mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "V mariboru", "Univerza v Mariboru")) %>%
+  mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "Fakulteta", "Filozofska fakulteta")) %>% 
+  mutate(across(povprecno_stevilo_ur_na_teden:ne_zelim_odgovoriti, ~ as.numeric(str_replace(.x, ",", "."))))
+
+```
+
+```{r}
+write.table(zadovoljstvo_b7, "data/zadovoljstvo_b7.txt", sep = "\t", dec = ",", fileEncoding = "UTF-8", row.names = F)
+zadovoljstvo_b7 <- read.table("data/zadovoljstvo_b7.txt", header = T, sep = "\t", dec = ",", fileEncoding = "UTF-8")
+
+```
+
+
+```{r}
+zadovoljstvo_b7_11ne <- zadovoljstvo_b7 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>%
+  group_by(sifra_sp, stopnja) 
+kbl(zadovoljstvo_b7_11ne) %>% kable_classic(full_width = T, html_font = "Cambria")
+
+zadovoljstvo_b7_11ne %>%
+  filter(povprecno_stevilo_ur_na_teden > 0) %>% 
+  ggplot(aes(povprecno_stevilo_ur_na_teden, sifra_sp, 
+             fill = sifra_sp)) +
+  geom_col(show.legend = F) +
+  labs(title = "B7. Povprečno število ur na teden za študij")
+
+```
+
+
+# C1.1. Delovne izkušnje pred visokošolskim izobraževanjem
+
+```{r}
+zadovoljstvo_c1_1 <- readxl::read_xlsx(zadovoljstvo_vprasalniki, sheet = "C1.1.", skip = 3) %>% 
+  clean_names() %>% 
+  separate(studijski_program_institucija, 
+           into = c("sifra_sp", "studijski_program_institucija"), 
+           sep = " ", remove = F, extra = "merge") %>% 
+  mutate(studijski_program_institucija = 
+           str_to_sentence(studijski_program_institucija)) %>% 
+    mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "V mariboru", "Univerza v Mariboru")) %>%
+  mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "Fakulteta", "Filozofska fakulteta")) %>% 
+  mutate(across(da:standardni_odklon_povprecne_vrednosti_za_odgovor_da_v_mesecih, ~ as.numeric(str_replace(.x, ",", "."))))
+
+```
+
+```{r}
+write.table(zadovoljstvo_c1_1, "data/zadovoljstvo_c1_1.txt", sep = "\t", dec = ",", fileEncoding = "UTF-8", row.names = F)
+zadovoljstvo_c1_1 <- read.table("data/zadovoljstvo_c1_1.txt", header = T, sep = "\t", dec = ",", fileEncoding = "UTF-8")
+
+```
+
+
+```{r}
+zadovoljstvo_c1_1 %>% 
+  select(-stopnja, -smer) %>% 
+  filter(str_detect(sifra_sp, prjName)) %>% 
+  kbl() %>% kable_classic(full_width = F, html_font = "Cambria")
+
+zadovoljstvo_c1_1 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>% 
+  pivot_longer(da:ne_zelim_odgovoriti, names_to = "odgovor", values_to = "procent") %>% 
+  ggplot(aes(procent, odgovor, fill = odgovor)) +
+  geom_col(show.legend = F) +
+  labs(title = "C1.1. Delovne izkušnje pred visokošolskim izobraževanjem,",
+       subtitle = "povezane s programom")
+    
+
+```
+
+
+# C1.2. Delovne izkušnje med visokošolskim izobraževanjem
+
+```{r}
+zadovoljstvo_c1_2 <- readxl::read_xlsx(zadovoljstvo_vprasalniki, sheet = "C1.2.", skip = 3) %>% 
+  clean_names() %>% 
+  separate(studijski_program_institucija, 
+           into = c("sifra_sp", "studijski_program_institucija"), 
+           sep = " ", remove = F, extra = "merge") %>% 
+  mutate(studijski_program_institucija = 
+           str_to_sentence(studijski_program_institucija)) %>% 
+    mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "V mariboru", "Univerza v Mariboru")) %>%
+  mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "Fakulteta", "Filozofska fakulteta")) %>% 
+  mutate(across(da:standardni_odklon_povprecne_vrednosti_za_odgovor_da_v_mesecih, ~ as.numeric(str_replace(.x, ",", "."))))
+
+```
+
+```{r}
+write.table(zadovoljstvo_c1_2, "data/zadovoljstvo_c1_2.txt", sep = "\t", dec = ",", fileEncoding = "UTF-8", row.names = F)
+zadovoljstvo_c1_2 <- read.table("data/zadovoljstvo_c1_2.txt", header = T, sep = "\t", dec = ",", fileEncoding = "UTF-8")
+
+```
+
+
+```{r}
+zadovoljstvo_c1_2 %>% 
+  filter(str_detect(sifra_sp, prjName))  %>% 
+  kbl() %>% kable_classic(full_width = F, html_font = "Cambria")
+
+zadovoljstvo_c1_2 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>% 
+  pivot_longer(da:ne_zelim_odgovoriti, names_to = "odgovor", values_to = "procent") %>% 
+  ggplot(aes(procent, odgovor, fill = odgovor)) +
+  geom_col(show.legend = F) +
+  labs(title = "C1.2. Delovne izkušnje med visokošolskim izobraževanjem,",
+       subtitle = "povezane s programom")
+    
+
+```
+
+
+# C2.1. Delovne izkušnje pred visokošolskim izobraževanjem, nepovezane s programom
+
+```{r}
+zadovoljstvo_c2_1 <- readxl::read_xlsx(zadovoljstvo_vprasalniki, sheet = "C2.1.", skip = 3) %>% 
+  clean_names() %>% 
+  separate(studijski_program_institucija, 
+           into = c("sifra_sp", "studijski_program_institucija"), 
+           sep = " ", remove = F, extra = "merge") %>% 
+  mutate(studijski_program_institucija = 
+           str_to_sentence(studijski_program_institucija)) %>% 
+    mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "V mariboru", "Univerza v Mariboru")) %>%
+  mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "Fakulteta", "Filozofska fakulteta")) %>% 
+  mutate(across(da:standardni_odklon_povprecne_vrednosti_za_odgovor_da_v_mesecih, ~ as.numeric(str_replace(.x, ",", "."))))
+
+```
+
+```{r}
+write.table(zadovoljstvo_c2_1, "data/zadovoljstvo_c2_1.txt", sep = "\t", dec = ",", fileEncoding = "UTF-8", row.names = F)
+zadovoljstvo_c2_1 <- read.table("data/zadovoljstvo_c2_1.txt", header = T, sep = "\t", dec = ",", fileEncoding = "UTF-8")
+
+```
+
+
+```{r}
+zadovoljstvo_c2_1 %>% 
+  filter(str_detect(sifra_sp, prjName))  %>% 
+  kbl() %>% kable_classic(full_width = F, html_font = "Cambria")
+
+zadovoljstvo_c2_1 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>% 
+  pivot_longer(da:ne_zelim_odgovoriti, names_to = "odgovor", values_to = "procent") %>% 
+  ggplot(aes(procent, odgovor, fill = odgovor)) +
+  geom_col(show.legend = F) +
+  labs(title = "C2.1. Delovne izkušnje pred visokošolskim izobraževanjem,",
+       subtitle = "nepovezane s programom")
+    
+
+```
+
+
+# C2.2. Delovne izkušnje med visokošolskim izobraževanjem, nepovezane s programom
+
+```{r}
+zadovoljstvo_c2_2 <- readxl::read_xlsx(zadovoljstvo_vprasalniki, sheet = "C2.2.", skip = 3) %>% 
+  clean_names() %>% 
+  separate(studijski_program_institucija, 
+           into = c("sifra_sp", "studijski_program_institucija"), 
+           sep = " ", remove = F, extra = "merge") %>% 
+  mutate(studijski_program_institucija = 
+           str_to_sentence(studijski_program_institucija)) %>% 
+    mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "V mariboru", "Univerza v Mariboru")) %>%
+  mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "Fakulteta", "Filozofska fakulteta")) %>% 
+  mutate(across(da:standardni_odklon_povprecne_vrednosti_za_odgovor_da_v_mesecih, ~ as.numeric(str_replace(.x, ",", "."))))
+
+```
+
+```{r}
+write.table(zadovoljstvo_c2_2, "data/zadovoljstvo_c2_2.txt", sep = "\t", dec = ",", fileEncoding = "UTF-8", row.names = F)
+zadovoljstvo_c2_2 <- read.table("data/zadovoljstvo_c2_2.txt", header = T, sep = "\t", dec = ",", fileEncoding = "UTF-8")
+
+```
+
+
+```{r}
+zadovoljstvo_c2_2 %>% 
+  filter(str_detect(sifra_sp, prjName))  %>% 
+  kbl() %>% kable_classic(full_width = F, html_font = "Cambria")
+
+zadovoljstvo_c2_2 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>% 
+  pivot_longer(da:ne_zelim_odgovoriti, names_to = "odgovor", values_to = "procent") %>% 
+  ggplot(aes(procent, odgovor, fill = odgovor)) +
+  geom_col(show.legend = F) +
+  labs(title = "C2.2. Delovne izkušnje med visokošolskim izobraževanjem,",
+       subtitle = "nepovezane s programom")
+    
+
+```
+
+
+# D1.1. Studijski program kot osnova za pridobitev zaposlitve
+
+```{r}
+zadovoljstvo_d1_1 <- readxl::read_xlsx(zadovoljstvo_vprasalniki, sheet = "D1.1.", skip = 3) %>% 
+  clean_names() %>% 
+  separate(studijski_program_institucija, 
+           into = c("sifra_sp", "studijski_program_institucija"), 
+           sep = " ", remove = F, extra = "merge") %>% 
+  mutate(studijski_program_institucija = 
+           str_to_sentence(studijski_program_institucija)) %>% 
+    mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "V mariboru", "Univerza v Mariboru")) %>%
+  mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "Fakulteta", "Filozofska fakulteta")) %>% 
+  mutate(across(x1_sploh_ne:srednja_vrednost_mediana, ~ as.numeric(str_replace(.x, ",", "."))))
+
+```
+
+```{r}
+write.table(zadovoljstvo_d1_1, "data/zadovoljstvo_d1_1.txt", sep = "\t", dec = ",", fileEncoding = "UTF-8", row.names = F)
+zadovoljstvo_d1_1 <- read.table("data/zadovoljstvo_d1_1.txt", header = T, sep = "\t", dec = ",", fileEncoding = "UTF-8")
+
+```
+
+
+```{r}
+zadovoljstvo_d1_1_11ne <- zadovoljstvo_d1_1 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>%
+  group_by(sifra_sp, stopnja, srednja_vrednost_mediana) %>% 
+  # rename(x9_ne_zelim_odgovoriti = ne_zelim_odgovoriti) %>% 
+  pivot_longer(x1_sploh_ne:ne_zelim_odgovoriti, names_to = "ocena", values_to = "procent") %>% 
+  mutate(ocena = str_extract(ocena, "[\\d]+")) 
+kbl(zadovoljstvo_d1_1_11ne) %>% kable_classic(full_width = T, html_font = "Cambria")
+
+library(scales)
+zadovoljstvo_d1_1_11ne %>%
+  ggplot(aes(ocena, procent, fill = ocena)) +
+  geom_col(show.legend = F) +
+  # scale_y_continuous(labels = percent_format()) %>% 
+  geom_vline(xintercept = zadovoljstvo_d1_1_11ne$srednja_vrednost_mediana, 
+             lty=2, cex=1, color = "red") +
+  labs(title = "D1.1. Študijski program kot osnova za pridobitev zaposlitve")
+
+```
+
+
+# D1.2. Studijski program kot osnova za začetek dela
+
+```{r}
+zadovoljstvo_d1_2 <- readxl::read_xlsx(zadovoljstvo_vprasalniki, sheet = "D1.2.", skip = 3) %>% 
+  clean_names() %>% 
+  separate(studijski_program_institucija, 
+           into = c("sifra_sp", "studijski_program_institucija"), 
+           sep = " ", remove = F, extra = "merge") %>% 
+  mutate(studijski_program_institucija = 
+           str_to_sentence(studijski_program_institucija)) %>% 
+    mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "V mariboru", "Univerza v Mariboru")) %>%
+  mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "Fakulteta", "Filozofska fakulteta")) %>% 
+  mutate(across(x1_sploh_ne:srednja_vrednost_mediana, ~ as.numeric(str_replace(.x, ",", "."))))
+
+```
+
+```{r}
+write.table(zadovoljstvo_d1_2, "data/zadovoljstvo_d1_2.txt", sep = "\t", dec = ",", fileEncoding = "UTF-8", row.names = F)
+zadovoljstvo_d1_2 <- read.table("data/zadovoljstvo_d1_2.txt", header = T, sep = "\t", dec = ",", fileEncoding = "UTF-8")
+
+```
+
+
+```{r}
+zadovoljstvo_d1_2_11ne <- zadovoljstvo_d1_2 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>%
+  group_by(sifra_sp, stopnja, srednja_vrednost_mediana) %>% 
+  # rename(x9_ne_zelim_odgovoriti = ne_zelim_odgovoriti) %>% 
+  pivot_longer(x1_sploh_ne:ne_zelim_odgovoriti, names_to = "ocena", values_to = "procent") %>% 
+  mutate(ocena = str_extract(ocena, "[\\d]+")) 
+kbl(zadovoljstvo_d1_2_11ne) %>% kable_classic(full_width = T, html_font = "Cambria")
+
+library(scales)
+zadovoljstvo_d1_2_11ne %>%
+  ggplot(aes(ocena, procent, fill = ocena)) +
+  geom_col(show.legend = F) +
+  # scale_y_continuous(labels = percent_format()) %>% 
+  geom_vline(xintercept = zadovoljstvo_d1_2_11ne$srednja_vrednost_mediana, 
+             lty=2, cex=1, color = "red") +
+  labs(title = "D1.2. Študijski program kot osnova za začetek dela")
+
+```
+
+
+# D1.3. Studijski program kot osnova za nadaljnjo kariero
+
+```{r}
+zadovoljstvo_d1_3 <- readxl::read_xlsx(zadovoljstvo_vprasalniki, sheet = "D1.3.", skip = 3) %>% 
+  clean_names() %>% 
+  separate(studijski_program_institucija, 
+           into = c("sifra_sp", "studijski_program_institucija"), 
+           sep = " ", remove = F, extra = "merge") %>% 
+  mutate(studijski_program_institucija = 
+           str_to_sentence(studijski_program_institucija)) %>% 
+    mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "V mariboru", "Univerza v Mariboru")) %>%
+  mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "Fakulteta", "Filozofska fakulteta")) %>% 
+  mutate(across(x1_sploh_ne:srednja_vrednost_mediana, ~ as.numeric(str_replace(.x, ",", "."))))
+
+```
+
+```{r}
+write.table(zadovoljstvo_d1_3, "data/zadovoljstvo_d1_3.txt", sep = "\t", dec = ",", fileEncoding = "UTF-8", row.names = F)
+zadovoljstvo_d1_3 <- read.table("data/zadovoljstvo_d1_3.txt", header = T, sep = "\t", dec = ",", fileEncoding = "UTF-8")
+
+```
+
+
+```{r}
+zadovoljstvo_d1_3_11ne <- zadovoljstvo_d1_3 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>%
+  group_by(sifra_sp, stopnja, srednja_vrednost_mediana) %>% 
+  # rename(x9_ne_zelim_odgovoriti = ne_zelim_odgovoriti) %>% 
+  pivot_longer(x1_sploh_ne:ne_zelim_odgovoriti, names_to = "ocena", values_to = "procent") %>% 
+  mutate(ocena = str_extract(ocena, "[\\d]+")) 
+kbl(zadovoljstvo_d1_3_11ne) %>% kable_classic(full_width = T, html_font = "Cambria")
+
+library(scales)
+zadovoljstvo_d1_3_11ne %>%
+  ggplot(aes(ocena, procent, fill = ocena)) +
+  geom_col(show.legend = F) +
+  # scale_y_continuous(labels = percent_format()) %>% 
+  geom_vline(xintercept = zadovoljstvo_d1_3_11ne$srednja_vrednost_mediana, 
+             lty=2, cex=1, color = "red") +
+  labs(title = "D1.3. Študijski program kot osnova za razvoj nadaljnje kariere")
+
+```
+
+
+# D1.4. Studijski program kot osnova za razvoj podjetniških sposobnosti
+
+```{r}
+zadovoljstvo_d1_4 <- readxl::read_xlsx(zadovoljstvo_vprasalniki, sheet = "D1.4.", skip = 3) %>% 
+  clean_names() %>% 
+  separate(studijski_program_institucija, 
+           into = c("sifra_sp", "studijski_program_institucija"), 
+           sep = " ", remove = F, extra = "merge") %>% 
+  mutate(studijski_program_institucija = 
+           str_to_sentence(studijski_program_institucija)) %>% 
+    mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "V mariboru", "Univerza v Mariboru")) %>%
+  mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "Fakulteta", "Filozofska fakulteta")) %>% 
+  mutate(across(x1_sploh_ne:srednja_vrednost_mediana, ~ as.numeric(str_replace(.x, ",", "."))))
+
+```
+
+```{r}
+write.table(zadovoljstvo_d1_4, "data/zadovoljstvo_d1_4.txt", sep = "\t", dec = ",", fileEncoding = "UTF-8", row.names = F)
+zadovoljstvo_d1_4 <- read.table("data/zadovoljstvo_d1_4.txt", header = T, sep = "\t", dec = ",", fileEncoding = "UTF-8")
+
+```
+
+
+```{r}
+zadovoljstvo_d1_4_11ne <- zadovoljstvo_d1_4 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>%
+  group_by(sifra_sp, stopnja, srednja_vrednost_mediana) %>% 
+  # rename(x9_ne_zelim_odgovoriti = ne_zelim_odgovoriti) %>% 
+  pivot_longer(x1_sploh_ne:ne_zelim_odgovoriti, names_to = "ocena", values_to = "procent") %>% 
+  mutate(ocena = str_extract(ocena, "[\\d]")) 
+kbl(zadovoljstvo_d1_4_11ne) %>% kable_classic(full_width = T, html_font = "Cambria")
+
+library(scales)
+zadovoljstvo_d1_4_11ne %>%
+  ggplot(aes(ocena, procent, fill = ocena)) +
+  geom_col(show.legend = F) +
+  # scale_y_continuous(labels = percent_format()) %>% 
+  geom_vline(xintercept = zadovoljstvo_d1_4_11ne$srednja_vrednost_mediana, 
+             lty=2, cex=1, color = "red") +
+  labs(title = "D1.4. Studijski program kot osnova za razvoj podjetniških sposobnosti")
+
+```
+
+
+# D1.5. Studijski program kot osnova za osebni razvoj
+
+```{r}
+zadovoljstvo_d1_5 <- readxl::read_xlsx(zadovoljstvo_vprasalniki, sheet = "D1.5.", skip = 3) %>% 
+  clean_names() %>% 
+  separate(studijski_program_institucija, 
+           into = c("sifra_sp", "studijski_program_institucija"), 
+           sep = " ", remove = F, extra = "merge") %>% 
+  mutate(studijski_program_institucija = 
+           str_to_sentence(studijski_program_institucija)) %>% 
+    mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "V mariboru", "Univerza v Mariboru")) %>%
+  mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "Fakulteta", "Filozofska fakulteta")) %>% 
+  mutate(across(x1_sploh_ne:srednja_vrednost_mediana, ~ as.numeric(str_replace(.x, ",", "."))))
+
+```
+
+```{r}
+write.table(zadovoljstvo_d1_5, "data/zadovoljstvo_d1_5.txt", sep = "\t", dec = ",", fileEncoding = "UTF-8", row.names = F)
+zadovoljstvo_d1_5 <- read.table("data/zadovoljstvo_d1_5.txt", header = T, sep = "\t", dec = ",", fileEncoding = "UTF-8")
+
+```
+
+
+```{r}
+zadovoljstvo_d1_5_11ne <- zadovoljstvo_d1_5 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>%
+  group_by(sifra_sp, stopnja, srednja_vrednost_mediana) %>% 
+  # rename(x9_ne_zelim_odgovoriti = ne_zelim_odgovoriti) %>% 
+  pivot_longer(x1_sploh_ne:ne_zelim_odgovoriti, names_to = "ocena", values_to = "procent") %>% 
+  mutate(ocena = str_extract(ocena, "[\\d]+")) 
+kbl(zadovoljstvo_d1_5_11ne) %>% kable_classic(full_width = T, html_font = "Cambria")
+
+library(scales)
+zadovoljstvo_d1_5_11ne %>%
+  ggplot(aes(ocena, procent, fill = ocena)) +
+  geom_col(show.legend = F) +
+  # scale_y_continuous(labels = percent_format()) %>% 
+  geom_vline(xintercept = zadovoljstvo_d1_5_11ne$srednja_vrednost_mediana, lty=2, 
+             cex=1, color = "red") +
+  labs(title = "D1.5. Studijski program kot osnova za osebni razvoj")
+
+```
+
+
+# D2. Ali bi ponovno izbrali študijski program na isti instituciji
+
+```{r}
+zadovoljstvo_d2 <- readxl::read_xlsx(zadovoljstvo_vprasalniki, sheet = "D2.", skip = 3) %>% 
+  clean_names() %>% 
+  separate(studijski_program_institucija, 
+           into = c("sifra_sp", "studijski_program_institucija"), 
+           sep = " ", remove = F, extra = "merge") %>% 
+  mutate(studijski_program_institucija = 
+           str_to_sentence(studijski_program_institucija)) %>% 
+    mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "V mariboru", "Univerza v Mariboru")) %>%
+  mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "Fakulteta", "Filozofska fakulteta")) %>% 
+  mutate(across(da:ne_zelim_odgovoriti, ~ as.numeric(str_replace(.x, ",", "."))))
+
+```
+
+```{r}
+write.table(zadovoljstvo_d2, "data/zadovoljstvo_d2.txt", sep = "\t", dec = ",", fileEncoding = "UTF-8", row.names = F)
+zadovoljstvo_d2 <- read.table("data/zadovoljstvo_d2.txt", header = T, sep = "\t", dec = ",", fileEncoding = "UTF-8")
+
+```
+
+
+```{r}
+zadovoljstvo_d2 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>% 
+  kbl() %>% kable_classic(full_width = T, html_font = "Cambria")
+
+zadovoljstvo_d2 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>% 
+  pivot_longer(da:ne_zelim_odgovoriti, names_to = "odgovor", values_to = "procent") %>% 
+  ggplot(aes(procent, odgovor, fill = sifra_sp)) +
+  geom_col(show.legend = F, position = "dodge") +
+  labs(title = "D2. Ponovno bi izbral študijski program",
+       subtitle = "na isti visokošolksi instituciji") +
+  facet_wrap(~ sifra_sp)
+
+```
+
+
+# D3. V kolikšni meri so bile naslednje trditve značilne za vaš študijski program? 
+## D3.1.: Program je bil zahteven.  
+
+```{r}
+zadovoljstvo_d3_1 <- readxl::read_xlsx(zadovoljstvo_vprasalniki, sheet = "D3.1.", skip = 3) %>% 
+  clean_names() %>% 
+  separate(studijski_program_institucija, 
+           into = c("sifra_sp", "studijski_program_institucija"), 
+           sep = " ", remove = F, extra = "merge") %>% 
+  mutate(studijski_program_institucija = 
+           str_to_sentence(studijski_program_institucija)) %>% 
+    mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "V mariboru", "Univerza v Mariboru")) %>%
+  mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "Fakulteta", "Filozofska fakulteta")) %>% 
+  mutate(across(x1_sploh_ne:srednja_vrednost_mediana, ~ as.numeric(str_replace(.x, ",", "."))))
+
+```
+
+```{r}
+write.table(zadovoljstvo_d3_1, "data/zadovoljstvo_d3_1.txt", sep = "\t", dec = ",", fileEncoding = "UTF-8", row.names = F)
+zadovoljstvo_d3_1 <- read.table("data/zadovoljstvo_d3_1.txt", header = T, sep = "\t", dec = ",", fileEncoding = "UTF-8")
+
+```
+
+
+```{r}
+zadovoljstvo_d3_1_11ne <- zadovoljstvo_d3_1 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>%
+  group_by(sifra_sp, stopnja, srednja_vrednost_mediana) %>% 
+  # rename(x9_ne_zelim_odgovoriti = ne_zelim_odgovoriti) %>% 
+  pivot_longer(x1_sploh_ne:ne_zelim_odgovoriti, names_to = "ocena", values_to = "procent") %>% 
+  mutate(ocena = str_extract(ocena, "[\\d]")) 
+kbl(zadovoljstvo_d3_1_11ne) %>% kable_classic(full_width = T, html_font = "Cambria")
+
+zadovoljstvo_d3_1_11ne %>%
+  ggplot(aes(ocena, procent, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = zadovoljstvo_d3_1_11ne$srednja_vrednost_mediana,
+             lty=2, cex=1, color = "red") +
+  labs(title = "D3.1. Studijski program je bil zahteven") +
+  facet_wrap(~ sifra_sp)
+
+```
+
+
+# D3. V kolikšni meri so bile naslednje trditve značilne za vaš študijski program? 
+## D3.2.: Svobodno sem lahko oblikoval/a svoj predmetnik.
+
+```{r}
+zadovoljstvo_d3_2 <- readxl::read_xlsx(zadovoljstvo_vprasalniki, sheet = "D3.2.", skip = 3) %>% 
+  clean_names() %>% 
+  separate(studijski_program_institucija, 
+           into = c("sifra_sp", "studijski_program_institucija"), 
+           sep = " ", remove = F, extra = "merge") %>% 
+  mutate(studijski_program_institucija = 
+           str_to_sentence(studijski_program_institucija)) %>% 
+    mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "V mariboru", "Univerza v Mariboru")) %>%
+  mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "Fakulteta", "Filozofska fakulteta")) %>% 
+  mutate(across(x1_sploh_ne:srednja_vrednost_mediana, ~ as.numeric(str_replace(.x, ",", "."))))
+
+```
+
+```{r}
+write.table(zadovoljstvo_d3_2, "data/zadovoljstvo_d3_2.txt", sep = "\t", dec = ",", fileEncoding = "UTF-8", row.names = F)
+zadovoljstvo_d3_2 <- read.table("data/zadovoljstvo_d3_2.txt", header = T, sep = "\t", dec = ",", fileEncoding = "UTF-8")
+
+```
+
+
+```{r}
+zadovoljstvo_d3_2_11ne <- zadovoljstvo_d3_2 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>%
+  group_by(sifra_sp, stopnja, srednja_vrednost_mediana) %>% 
+  # rename(x9_ne_zelim_odgovoriti = ne_zelim_odgovoriti) %>% 
+  pivot_longer(x1_sploh_ne:ne_zelim_odgovoriti, names_to = "ocena", values_to = "procent") %>% 
+  mutate(ocena = str_extract(ocena, "[\\d]")) 
+kbl(zadovoljstvo_d3_2_11ne) %>% kable_classic(full_width = T, html_font = "Cambria")
+
+zadovoljstvo_d3_2_11ne %>%
+  ggplot(aes(ocena, procent, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = zadovoljstvo_d3_2_11ne$srednja_vrednost_mediana,
+             lty=2, cex=1, color = "red") +
+  labs(title = "D3.2.: Svobodno sem lahko oblikoval/a svoj predmetnik") +
+  facet_wrap(~ sifra_sp)
+
+```
+
+
+# D3. V kolikšni meri so bile naslednje trditve značilne za vaš študijski program? 
+## D3.3.: Program je bil široko zastavljen. 
+
+```{r}
+zadovoljstvo_d3_3 <- readxl::read_xlsx(zadovoljstvo_vprasalniki, sheet = "D3.3.", skip = 3) %>% 
+  clean_names() %>% 
+  separate(studijski_program_institucija, 
+           into = c("sifra_sp", "studijski_program_institucija"), 
+           sep = " ", remove = F, extra = "merge") %>% 
+  mutate(studijski_program_institucija = 
+           str_to_sentence(studijski_program_institucija)) %>% 
+    mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "V mariboru", "Univerza v Mariboru")) %>%
+  mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "Fakulteta", "Filozofska fakulteta")) %>% 
+  mutate(across(x1_sploh_ne:srednja_vrednost_mediana, ~ as.numeric(str_replace(.x, ",", "."))))
+
+```
+
+```{r}
+write.table(zadovoljstvo_d3_3, "data/zadovoljstvo_d3_3.txt", sep = "\t", dec = ",", fileEncoding = "UTF-8", row.names = F)
+zadovoljstvo_d3_3 <- read.table("data/zadovoljstvo_d3_3.txt", header = T, sep = "\t", dec = ",", fileEncoding = "UTF-8")
+
+```
+
+
+```{r}
+zadovoljstvo_d3_3_11ne <- zadovoljstvo_d3_3 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>%
+  group_by(sifra_sp, stopnja, srednja_vrednost_mediana) %>% 
+  # rename(x9_ne_zelim_odgovoriti = ne_zelim_odgovoriti) %>% 
+  pivot_longer(x1_sploh_ne:ne_zelim_odgovoriti, names_to = "ocena", values_to = "procent") %>% 
+  mutate(ocena = str_extract(ocena, "[\\d]")) 
+kbl(zadovoljstvo_d3_3_11ne) %>% kable_classic(full_width = T, html_font = "Cambria")
+
+zadovoljstvo_d3_3_11ne %>%
+  ggplot(aes(ocena, procent, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = zadovoljstvo_d3_3_11ne$srednja_vrednost_mediana,
+             lty=2, cex=1, color = "red") +
+  labs(title = "D3.3.: Program je bil široko zastavljen") +
+  facet_wrap(~ sifra_sp)
+
+```
+
+
+# D3. V kolikšni meri so bile naslednje trditve značilne za vaš študijski program? 
+## D3.4.: Program je bil usmerjen v poklic. 
+
+```{r}
+zadovoljstvo_d3_4 <- readxl::read_xlsx(zadovoljstvo_vprasalniki, sheet = "D3.4.", skip = 3) %>% 
+  clean_names() %>% 
+  separate(studijski_program_institucija, 
+           into = c("sifra_sp", "studijski_program_institucija"), 
+           sep = " ", remove = F, extra = "merge") %>% 
+  mutate(studijski_program_institucija = 
+           str_to_sentence(studijski_program_institucija)) %>% 
+    mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "V mariboru", "Univerza v Mariboru")) %>%
+  mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "Fakulteta", "Filozofska fakulteta")) %>% 
+  mutate(across(x1_sploh_ne:srednja_vrednost_mediana, ~ as.numeric(str_replace(.x, ",", "."))))
+
+```
+
+```{r}
+write.table(zadovoljstvo_d3_4, "data/zadovoljstvo_d3_4.txt", sep = "\t", dec = ",", fileEncoding = "UTF-8", row.names = F)
+zadovoljstvo_d3_4 <- read.table("data/zadovoljstvo_d3_4.txt", header = T, sep = "\t", dec = ",", fileEncoding = "UTF-8")
+
+```
+
+
+```{r}
+zadovoljstvo_d3_4_11ne <- zadovoljstvo_d3_4 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>%
+  group_by(sifra_sp, stopnja, srednja_vrednost_mediana) %>% 
+  # rename(x9_ne_zelim_odgovoriti = ne_zelim_odgovoriti) %>% 
+  pivot_longer(x1_sploh_ne:ne_zelim_odgovoriti, names_to = "ocena", values_to = "procent") %>% 
+  mutate(ocena = str_extract(ocena, "[\\d]")) 
+kbl(zadovoljstvo_d3_4_11ne) %>% kable_classic(full_width = T, html_font = "Cambria")
+
+zadovoljstvo_d3_4_11ne %>%
+  ggplot(aes(ocena, procent, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = zadovoljstvo_d3_4_11ne$srednja_vrednost_mediana,
+             lty=2, cex=1, color = "red") +
+  labs(title = "D3.4.: Program je bil usmerjen v poklic") +
+  facet_wrap(~ sifra_sp)
+
+```
+
+
+# D3. V kolikšni meri so bile naslednje trditve značilne za vaš študijski program? 
+## D3.5.: Program je imel visok akademski ugled.  
+
+```{r}
+zadovoljstvo_d3_5 <- readxl::read_xlsx(zadovoljstvo_vprasalniki, sheet = "D3.5.", skip = 3) %>% 
+  clean_names() %>% 
+  separate(studijski_program_institucija, 
+           into = c("sifra_sp", "studijski_program_institucija"), 
+           sep = " ", remove = F, extra = "merge") %>% 
+  mutate(studijski_program_institucija = 
+           str_to_sentence(studijski_program_institucija)) %>% 
+    mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "V mariboru", "Univerza v Mariboru")) %>%
+  mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "Fakulteta", "Filozofska fakulteta")) %>% 
+  mutate(across(x1_sploh_ne:srednja_vrednost_mediana, ~ as.numeric(str_replace(.x, ",", "."))))
+
+```
+
+```{r}
+write.table(zadovoljstvo_d3_5, "data/zadovoljstvo_d3_5.txt", sep = "\t", dec = ",", fileEncoding = "UTF-8", row.names = F)
+zadovoljstvo_d3_5 <- read.table("data/zadovoljstvo_d3_5.txt", header = T, sep = "\t", dec = ",", fileEncoding = "UTF-8")
+
+```
+
+
+```{r}
+zadovoljstvo_d3_5_11ne <- zadovoljstvo_d3_5 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>%
+  group_by(sifra_sp, stopnja, srednja_vrednost_mediana) %>% 
+  # rename(x9_ne_zelim_odgovoriti = ne_zelim_odgovoriti) %>% 
+  pivot_longer(x1_sploh_ne:ne_zelim_odgovoriti, names_to = "ocena", values_to = "procent") %>% 
+  mutate(ocena = str_extract(ocena, "[\\d]")) 
+kbl(zadovoljstvo_d3_5_11ne) %>% kable_classic(full_width = T, html_font = "Cambria")
+
+zadovoljstvo_d3_5_11ne %>%
+  ggplot(aes(ocena, procent, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = zadovoljstvo_d3_5_11ne$srednja_vrednost_mediana,
+             lty=2, cex=1, color = "red") +
+  labs(title = "D3.5.: Program je imel visok akademski ugled") +
+  facet_wrap(~ sifra_sp)
+
+```
+
+
+# D3. V kolikšni meri so bile naslednje trditve značilne za vaš študijski program? 
+## D3.6.: Program je izpolnil moja pričakovanja  
+
+```{r}
+zadovoljstvo_d3_6 <- readxl::read_xlsx(zadovoljstvo_vprasalniki, sheet = "D3.6.", skip = 3) %>% 
+  clean_names() %>% 
+  separate(studijski_program_institucija, 
+           into = c("sifra_sp", "studijski_program_institucija"), 
+           sep = " ", remove = F, extra = "merge") %>% 
+  mutate(studijski_program_institucija = 
+           str_to_sentence(studijski_program_institucija)) %>% 
+    mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "V mariboru", "Univerza v Mariboru")) %>%
+  mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "Fakulteta", "Filozofska fakulteta")) %>% 
+  mutate(across(x1_sploh_ne:srednja_vrednost_mediana, ~ as.numeric(str_replace(.x, ",", "."))))
+
+```
+
+```{r}
+write.table(zadovoljstvo_d3_6, "data/zadovoljstvo_d3_6.txt", sep = "\t", dec = ",", fileEncoding = "UTF-8", row.names = F)
+zadovoljstvo_d3_6 <- read.table("data/zadovoljstvo_d3_6.txt", header = T, sep = "\t", dec = ",", fileEncoding = "UTF-8")
+
+```
+
+
+```{r}
+zadovoljstvo_d3_6_11ne <- zadovoljstvo_d3_6 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>%
+  group_by(sifra_sp, stopnja, srednja_vrednost_mediana) %>% 
+  # rename(x9_ne_zelim_odgovoriti = ne_zelim_odgovoriti) %>% 
+  pivot_longer(x1_sploh_ne:ne_zelim_odgovoriti, names_to = "ocena", values_to = "procent") %>% 
+  mutate(ocena = str_extract(ocena, "[\\d]")) 
+kbl(zadovoljstvo_d3_6_11ne) %>% kable_classic(full_width = T, html_font = "Cambria")
+
+zadovoljstvo_d3_6_11ne %>%
+  ggplot(aes(ocena, procent, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = zadovoljstvo_d3_6_11ne$srednja_vrednost_mediana,
+             lty=2, cex=1, color = "red") +
+  labs(title = "D3.6.: Program je izpolnil moja pričakovanja") +
+  facet_wrap(~ sifra_sp)
+
+```
+
+
+# D4. V kolikšni meri je bil poudarek na naslednjih načinih poučevanja in študija na vašem študijskem programu? 
+## D4.1.: Predavanja 
+
+```{r}
+zadovoljstvo_d4_1 <- readxl::read_xlsx(zadovoljstvo_vprasalniki, sheet = "D4.1.", skip = 3) %>% 
+  clean_names() %>% 
+  separate(studijski_program_institucija, 
+           into = c("sifra_sp", "studijski_program_institucija"), 
+           sep = " ", remove = F, extra = "merge") %>% 
+  mutate(studijski_program_institucija = 
+           str_to_sentence(studijski_program_institucija)) %>% 
+    mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "V mariboru", "Univerza v Mariboru")) %>%
+  mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "Fakulteta", "Filozofska fakulteta")) %>% 
+  mutate(across(x1_sploh_ne:srednja_vrednost_mediana, ~ as.numeric(str_replace(.x, ",", "."))))
+
+```
+
+```{r}
+write.table(zadovoljstvo_d4_1, "data/zadovoljstvo_d4_1.txt", sep = "\t", dec = ",", fileEncoding = "UTF-8", row.names = F)
+zadovoljstvo_d4_1 <- read.table("data/zadovoljstvo_d4_1.txt", header = T, sep = "\t", dec = ",", fileEncoding = "UTF-8")
+
+```
+
+
+```{r}
+zadovoljstvo_d4_1_11ne <- zadovoljstvo_d4_1 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>%
+  group_by(sifra_sp, stopnja, srednja_vrednost_mediana) %>% 
+  # rename(x9_ne_zelim_odgovoriti = ne_zelim_odgovoriti) %>% 
+  pivot_longer(x1_sploh_ne:ne_zelim_odgovoriti, names_to = "ocena", values_to = "procent") %>% 
+  mutate(ocena = str_extract(ocena, "[\\d]")) 
+kbl(zadovoljstvo_d4_1_11ne) %>% kable_classic(full_width = T, html_font = "Cambria")
+
+zadovoljstvo_d4_1_11ne %>%
+  ggplot(aes(ocena, procent, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = zadovoljstvo_d4_1_11ne$srednja_vrednost_mediana,
+             lty=2, cex=1, color = "red") +
+  labs(title = "D4.1.: Poudarek na predavanjih") +
+  facet_wrap(~ sifra_sp)
+
+```
+
+
+# D4. V kolikšni meri je bil poudarek na naslednjih načinih poučevanja in študija na vašem študijskem programu? 
+## D4.2.: Skupinske naloge
+
+```{r}
+zadovoljstvo_d4_2 <- readxl::read_xlsx(zadovoljstvo_vprasalniki, sheet = "D4.2.", skip = 3) %>% 
+  clean_names() %>% 
+  separate(studijski_program_institucija, 
+           into = c("sifra_sp", "studijski_program_institucija"), 
+           sep = " ", remove = F, extra = "merge") %>% 
+  mutate(studijski_program_institucija = 
+           str_to_sentence(studijski_program_institucija)) %>% 
+    mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "V mariboru", "Univerza v Mariboru")) %>%
+  mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "Fakulteta", "Filozofska fakulteta")) %>% 
+  mutate(across(x1_sploh_ne:srednja_vrednost_mediana, ~ as.numeric(str_replace(.x, ",", "."))))
+
+```
+
+```{r}
+write.table(zadovoljstvo_d4_2, "data/zadovoljstvo_d4_2.txt", sep = "\t", dec = ",", fileEncoding = "UTF-8", row.names = F)
+zadovoljstvo_d4_2 <- read.table("data/zadovoljstvo_d4_2.txt", header = T, sep = "\t", dec = ",", fileEncoding = "UTF-8")
+
+```
+
+
+```{r}
+zadovoljstvo_d4_2_11ne <- zadovoljstvo_d4_2 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>%
+  group_by(sifra_sp, stopnja, srednja_vrednost_mediana) %>% 
+  # rename(x9_ne_zelim_odgovoriti = ne_zelim_odgovoriti) %>% 
+  pivot_longer(x1_sploh_ne:ne_zelim_odgovoriti, names_to = "ocena", values_to = "procent") %>% 
+  mutate(ocena = str_extract(ocena, "[\\d]")) 
+kbl(zadovoljstvo_d4_2_11ne) %>% kable_classic(full_width = T, html_font = "Cambria")
+
+zadovoljstvo_d4_2_11ne %>%
+  ggplot(aes(ocena, procent, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = zadovoljstvo_d4_2_11ne$srednja_vrednost_mediana,
+             lty=2, cex=1, color = "red") +
+  labs(title = "D4.2.: Poudarek na skupinskih nalogah") +
+  facet_wrap(~ sifra_sp)
+
+```
+
+
+# D4. V kolikšni meri je bil poudarek na naslednjih načinih poučevanja in študija na vašem študijskem programu? 
+## D4.3.: Sodelovanje v raziskovalnih projektih   
+
+```{r}
+zadovoljstvo_d4_3 <- readxl::read_xlsx(zadovoljstvo_vprasalniki, sheet = "D4.3.", skip = 3) %>% 
+  clean_names() %>% 
+  separate(studijski_program_institucija, 
+           into = c("sifra_sp", "studijski_program_institucija"), 
+           sep = " ", remove = F, extra = "merge") %>% 
+  mutate(studijski_program_institucija = 
+           str_to_sentence(studijski_program_institucija)) %>% 
+    mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "V mariboru", "Univerza v Mariboru")) %>%
+  mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "Fakulteta", "Filozofska fakulteta")) %>% 
+  mutate(across(x1_sploh_ne:srednja_vrednost_mediana, ~ as.numeric(str_replace(.x, ",", "."))))
+
+```
+
+```{r}
+write.table(zadovoljstvo_d4_3, "data/zadovoljstvo_d4_3.txt", sep = "\t", dec = ",", fileEncoding = "UTF-8", row.names = F)
+zadovoljstvo_d4_3 <- read.table("data/zadovoljstvo_d4_3.txt", header = T, sep = "\t", dec = ",", fileEncoding = "UTF-8")
+
+```
+
+
+```{r}
+zadovoljstvo_d4_3_11ne <- zadovoljstvo_d4_3 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>%
+  group_by(sifra_sp, stopnja, srednja_vrednost_mediana) %>% 
+  # rename(x9_ne_zelim_odgovoriti = ne_zelim_odgovoriti) %>% 
+  pivot_longer(x1_sploh_ne:ne_zelim_odgovoriti, names_to = "ocena", values_to = "procent") %>% 
+  mutate(ocena = str_extract(ocena, "[\\d]")) 
+kbl(zadovoljstvo_d4_3_11ne) %>% kable_classic(full_width = T, html_font = "Cambria")
+
+zadovoljstvo_d4_3_11ne %>%
+  ggplot(aes(ocena, procent, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = zadovoljstvo_d4_3_11ne$srednja_vrednost_mediana,
+             lty=2, cex=1, color = "red") +
+  labs(title = "D4.3.: Poudarek na sodelovanje v raziskovalnih projektih") +
+  facet_wrap(~ sifra_sp)
+
+```
+
+
+# D4. V kolikšni meri je bil poudarek na naslednjih načinih poučevanja in študija na vašem študijskem programu? 
+## D4.4.: Praktično usposabljanje v strokovnem okolju 
+
+```{r}
+zadovoljstvo_d4_4 <- readxl::read_xlsx(zadovoljstvo_vprasalniki, sheet = "D4.4.", skip = 3) %>% 
+  clean_names() %>% 
+  separate(studijski_program_institucija, 
+           into = c("sifra_sp", "studijski_program_institucija"), 
+           sep = " ", remove = F, extra = "merge") %>% 
+  mutate(studijski_program_institucija = 
+           str_to_sentence(studijski_program_institucija)) %>% 
+    mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "V mariboru", "Univerza v Mariboru")) %>%
+  mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "Fakulteta", "Filozofska fakulteta")) %>% 
+  mutate(across(x1_sploh_ne:srednja_vrednost_mediana, ~ as.numeric(str_replace(.x, ",", "."))))
+
+```
+
+```{r}
+write.table(zadovoljstvo_d4_4, "data/zadovoljstvo_d4_4.txt", sep = "\t", dec = ",", fileEncoding = "UTF-8", row.names = F)
+zadovoljstvo_d4_4 <- read.table("data/zadovoljstvo_d4_4.txt", header = T, sep = "\t", dec = ",", fileEncoding = "UTF-8")
+
+```
+
+
+```{r}
+zadovoljstvo_d4_4_11ne <- zadovoljstvo_d4_4 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>%
+  group_by(sifra_sp, stopnja, srednja_vrednost_mediana) %>% 
+  # rename(x9_ne_zelim_odgovoriti = ne_zelim_odgovoriti) %>% 
+  pivot_longer(x1_sploh_ne:ne_zelim_odgovoriti, names_to = "ocena", values_to = "procent") %>% 
+  mutate(ocena = str_extract(ocena, "[\\d]")) 
+kbl(zadovoljstvo_d4_4_11ne) %>% kable_classic(full_width = T, html_font = "Cambria")
+
+zadovoljstvo_d4_4_11ne %>%
+  ggplot(aes(ocena, procent, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = zadovoljstvo_d4_4_11ne$srednja_vrednost_mediana,
+             lty=2, cex=1, color = "red") +
+  labs(title = "D4.4.: Poudarek na praktičnem usposabljanju v strokovnem okolju") +
+  facet_wrap(~ sifra_sp)
+
+```
+
+
+# D4. V kolikšni meri je bil poudarek na naslednjih načinih poučevanja in študija na vašem študijskem programu? 
+## D4.5.: Spoznavanje dejstev in praktična znanja
+
+```{r}
+zadovoljstvo_d4_5 <- readxl::read_xlsx(zadovoljstvo_vprasalniki, sheet = "D4.5.", skip = 3) %>% 
+  clean_names() %>% 
+  separate(studijski_program_institucija, 
+           into = c("sifra_sp", "studijski_program_institucija"), 
+           sep = " ", remove = F, extra = "merge") %>% 
+  mutate(studijski_program_institucija = 
+           str_to_sentence(studijski_program_institucija)) %>% 
+    mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "V mariboru", "Univerza v Mariboru")) %>%
+  mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "Fakulteta", "Filozofska fakulteta")) %>% 
+  mutate(across(x1_sploh_ne:srednja_vrednost_mediana, ~ as.numeric(str_replace(.x, ",", "."))))
+
+```
+
+```{r}
+write.table(zadovoljstvo_d4_5, "data/zadovoljstvo_d4_5.txt", sep = "\t", dec = ",", fileEncoding = "UTF-8", row.names = F)
+zadovoljstvo_d4_5 <- read.table("data/zadovoljstvo_d4_5.txt", header = T, sep = "\t", dec = ",", fileEncoding = "UTF-8")
+
+```
+
+
+```{r}
+zadovoljstvo_d4_5_11ne <- zadovoljstvo_d4_5 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>%
+  group_by(sifra_sp, stopnja, srednja_vrednost_mediana) %>% 
+  # rename(x9_ne_zelim_odgovoriti = ne_zelim_odgovoriti) %>% 
+  pivot_longer(x1_sploh_ne:ne_zelim_odgovoriti, names_to = "ocena", values_to = "procent") %>% 
+  mutate(ocena = str_extract(ocena, "[\\d]")) 
+kbl(zadovoljstvo_d4_5_11ne) %>% kable_classic(full_width = T, html_font = "Cambria")
+
+zadovoljstvo_d4_5_11ne %>%
+  ggplot(aes(ocena, procent, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = zadovoljstvo_d4_5_11ne$srednja_vrednost_mediana,
+             lty=2, cex=1, color = "red") +
+  labs(title = "D4.5.: Poudarek na spoznavanju dejstev in praktična znanja") +
+  facet_wrap(~ sifra_sp)
+
+```
+
+
+# D4. V kolikšni meri je bil poudarek na naslednjih načinih poučevanja in študija na vašem študijskem programu? 
+## D4.6: Spoznavanje teorij in paradigem 
+
+```{r}
+zadovoljstvo_d4_6 <- readxl::read_xlsx(zadovoljstvo_vprasalniki, sheet = "D4.6.", skip = 3) %>% 
+  clean_names() %>% 
+  separate(studijski_program_institucija, 
+           into = c("sifra_sp", "studijski_program_institucija"), 
+           sep = " ", remove = F, extra = "merge") %>% 
+  mutate(studijski_program_institucija = 
+           str_to_sentence(studijski_program_institucija)) %>% 
+    mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "V mariboru", "Univerza v Mariboru")) %>%
+  mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "Fakulteta", "Filozofska fakulteta")) %>% 
+  mutate(across(x1_sploh_ne:srednja_vrednost_mediana, ~ as.numeric(str_replace(.x, ",", "."))))
+
+```
+
+```{r}
+write.table(zadovoljstvo_d4_6, "data/zadovoljstvo_d4_6.txt", sep = "\t", dec = ",", fileEncoding = "UTF-8", row.names = F)
+zadovoljstvo_d4_6 <- read.table("data/zadovoljstvo_d4_6.txt", header = T, sep = "\t", dec = ",", fileEncoding = "UTF-8")
+
+```
+
+
+```{r}
+zadovoljstvo_d4_6_11ne <- zadovoljstvo_d4_6 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>%
+  group_by(sifra_sp, stopnja, srednja_vrednost_mediana) %>% 
+  # rename(x9_ne_zelim_odgovoriti = ne_zelim_odgovoriti) %>% 
+  pivot_longer(x1_sploh_ne:ne_zelim_odgovoriti, names_to = "ocena", values_to = "procent") %>% 
+  mutate(ocena = str_extract(ocena, "[\\d]")) 
+kbl(zadovoljstvo_d4_6_11ne) %>% kable_classic(full_width = T, html_font = "Cambria")
+
+zadovoljstvo_d4_6_11ne %>%
+  ggplot(aes(ocena, procent, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = zadovoljstvo_d4_6_11ne$srednja_vrednost_mediana,
+             lty=2, cex=1, color = "red") +
+  labs(title = "D4.6: Poudarek na spoznavanju teorij in paradigem") +
+  facet_wrap(~ sifra_sp)
+
+```
+
+
+# D4. V kolikšni meri je bil poudarek na naslednjih načinih poučevanja in študija na vašem študijskem programu? 
+## D4.7.: Projektno in problemsko zasnovano učenje 
+
+```{r}
+zadovoljstvo_d4_7 <- readxl::read_xlsx(zadovoljstvo_vprasalniki, sheet = "D4.7.", skip = 3) %>% 
+  clean_names() %>% 
+  separate(studijski_program_institucija, 
+           into = c("sifra_sp", "studijski_program_institucija"), 
+           sep = " ", remove = F, extra = "merge") %>% 
+  mutate(studijski_program_institucija = 
+           str_to_sentence(studijski_program_institucija)) %>% 
+    mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "V mariboru", "Univerza v Mariboru")) %>%
+  mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "Fakulteta", "Filozofska fakulteta")) %>% 
+  mutate(across(x1_sploh_ne:srednja_vrednost_mediana, ~ as.numeric(str_replace(.x, ",", "."))))
+
+```
+
+```{r}
+write.table(zadovoljstvo_d4_7, "data/zadovoljstvo_d4_7.txt", sep = "\t", dec = ",", fileEncoding = "UTF-8", row.names = F)
+zadovoljstvo_d4_7 <- read.table("data/zadovoljstvo_d4_7.txt", header = T, sep = "\t", dec = ",", fileEncoding = "UTF-8")
+
+```
+
+
+```{r}
+zadovoljstvo_d4_7_11ne <- zadovoljstvo_d4_7 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>%
+  group_by(sifra_sp, stopnja, srednja_vrednost_mediana) %>% 
+  # rename(x9_ne_zelim_odgovoriti = ne_zelim_odgovoriti) %>% 
+  pivot_longer(x1_sploh_ne:ne_zelim_odgovoriti, names_to = "ocena", values_to = "procent") %>% 
+  mutate(ocena = str_extract(ocena, "[\\d]")) 
+kbl(zadovoljstvo_d4_7_11ne) %>% kable_classic(full_width = T, html_font = "Cambria")
+
+zadovoljstvo_d4_7_11ne %>%
+  ggplot(aes(ocena, procent, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = zadovoljstvo_d4_7_11ne$srednja_vrednost_mediana,
+             lty=2, cex=1, color = "red") +
+  labs(title = "D4.7.: Poudarek na projektno in problemsko zasnovanem učenju") +
+  facet_wrap(~ sifra_sp)
+
+```
+
+
+# D4. V kolikšni meri je bil poudarek na naslednjih načinih poučevanja in študija na vašem študijskem programu? 
+## D4.8.: Pisne naloge 
+
+```{r}
+zadovoljstvo_d4_8 <- readxl::read_xlsx(zadovoljstvo_vprasalniki, sheet = "D4.8.", skip = 3) %>% 
+  clean_names() %>% 
+  separate(studijski_program_institucija, 
+           into = c("sifra_sp", "studijski_program_institucija"), 
+           sep = " ", remove = F, extra = "merge") %>% 
+  mutate(studijski_program_institucija = 
+           str_to_sentence(studijski_program_institucija)) %>% 
+    mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "V mariboru", "Univerza v Mariboru")) %>%
+  mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "Fakulteta", "Filozofska fakulteta")) %>% 
+  mutate(across(x1_sploh_ne:srednja_vrednost_mediana, ~ as.numeric(str_replace(.x, ",", "."))))
+
+```
+
+```{r}
+write.table(zadovoljstvo_d4_8, "data/zadovoljstvo_d4_8.txt", sep = "\t", dec = ",", fileEncoding = "UTF-8", row.names = F)
+zadovoljstvo_d4_8 <- read.table("data/zadovoljstvo_d4_8.txt", header = T, sep = "\t", dec = ",", fileEncoding = "UTF-8")
+
+```
+
+
+```{r}
+zadovoljstvo_d4_8_11ne <- zadovoljstvo_d4_8 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>%
+  group_by(sifra_sp, stopnja, srednja_vrednost_mediana) %>% 
+  # rename(x9_ne_zelim_odgovoriti = ne_zelim_odgovoriti) %>% 
+  pivot_longer(x1_sploh_ne:ne_zelim_odgovoriti, names_to = "ocena", values_to = "procent") %>% 
+  mutate(ocena = str_extract(ocena, "[\\d]")) 
+kbl(zadovoljstvo_d4_8_11ne) %>% kable_classic(full_width = T, html_font = "Cambria")
+
+zadovoljstvo_d4_8_11ne %>%
+  ggplot(aes(ocena, procent, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = zadovoljstvo_d4_8_11ne$srednja_vrednost_mediana,
+             lty=2, cex=1, color = "red") +
+  labs(title = "D4.8.: Poudarek na pisnih nalogah") +
+  facet_wrap(~ sifra_sp)
+
+```
+
+
+# D4. V kolikšni meri je bil poudarek na naslednjih načinih poučevanja in študija na vašem študijskem programu? 
+## D4.9.: Ustne predstavitve študentov 
+
+
+```{r}
+zadovoljstvo_d4_9 <- readxl::read_xlsx(zadovoljstvo_vprasalniki, sheet = "D4.9.", skip = 3) %>% 
+  clean_names() %>% 
+  separate(studijski_program_institucija, 
+           into = c("sifra_sp", "studijski_program_institucija"), 
+           sep = " ", remove = F, extra = "merge") %>% 
+  mutate(studijski_program_institucija = 
+           str_to_sentence(studijski_program_institucija)) %>% 
+    mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "V mariboru", "Univerza v Mariboru")) %>%
+  mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "Fakulteta", "Filozofska fakulteta")) %>% 
+  mutate(across(x1_sploh_ne:srednja_vrednost_mediana, ~ as.numeric(str_replace(.x, ",", "."))))
+
+```
+
+```{r}
+write.table(zadovoljstvo_d4_9, "data/zadovoljstvo_d4_9.txt", sep = "\t", dec = ",", fileEncoding = "UTF-8", row.names = F)
+zadovoljstvo_d4_9 <- read.table("data/zadovoljstvo_d4_9.txt", header = T, sep = "\t", dec = ",", fileEncoding = "UTF-8")
+
+```
+
+
+```{r}
+zadovoljstvo_d4_9_11ne <- zadovoljstvo_d4_9 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>%
+  group_by(sifra_sp, stopnja, srednja_vrednost_mediana) %>% 
+  # rename(x9_ne_zelim_odgovoriti = ne_zelim_odgovoriti) %>% 
+  pivot_longer(x1_sploh_ne:ne_zelim_odgovoriti, names_to = "ocena", values_to = "procent") %>% 
+  mutate(ocena = str_extract(ocena, "[\\d]")) 
+kbl(zadovoljstvo_d4_9_11ne) %>% kable_classic(full_width = T, html_font = "Cambria")
+
+zadovoljstvo_d4_9_11ne %>%
+  ggplot(aes(ocena, procent, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = zadovoljstvo_d4_9_11ne$srednja_vrednost_mediana,
+             lty=2, cex=1, color = "red") +
+  labs(title = "D4.9.: Poudarek na ustnih predstavitvah študentov") +
+  facet_wrap(~ sifra_sp)
+
+```
+
+
+
+# D4. V kolikšni meri je bil poudarek na naslednjih načinih poučevanja in študija na vašem študijskem programu? 
+## D4.10.: Sprotno preverjanje znanja 
+
+```{r}
+zadovoljstvo_d4_10 <- readxl::read_xlsx(zadovoljstvo_vprasalniki, sheet = "D4.10.", skip = 3) %>% 
+  clean_names() %>% 
+  separate(studijski_program_institucija, 
+           into = c("sifra_sp", "studijski_program_institucija"), 
+           sep = " ", remove = F, extra = "merge") %>% 
+  mutate(studijski_program_institucija = 
+           str_to_sentence(studijski_program_institucija)) %>% 
+    mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "V mariboru", "Univerza v Mariboru")) %>%
+  mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "Fakulteta", "Filozofska fakulteta")) %>% 
+  mutate(across(x1_sploh_ne:srednja_vrednost_mediana, ~ as.numeric(str_replace(.x, ",", "."))))
+
+```
+
+```{r}
+write.table(zadovoljstvo_d4_10, "data/zadovoljstvo_d4_10.txt", sep = "\t", dec = ",", fileEncoding = "UTF-8", row.names = F)
+zadovoljstvo_d4_10 <- read.table("data/zadovoljstvo_d4_10.txt", header = T, sep = "\t", dec = ",", fileEncoding = "UTF-8")
+
+```
+
+
+```{r}
+zadovoljstvo_d4_10_11ne <- zadovoljstvo_d4_10 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>%
+  group_by(sifra_sp, stopnja, srednja_vrednost_mediana) %>% 
+  # rename(x9_ne_zelim_odgovoriti = ne_zelim_odgovoriti) %>% 
+  pivot_longer(x1_sploh_ne:ne_zelim_odgovoriti, names_to = "ocena", values_to = "procent") %>% 
+  mutate(ocena = str_extract(ocena, "[\\d]")) 
+kbl(zadovoljstvo_d4_10_11ne) %>% kable_classic(full_width = T, html_font = "Cambria")
+
+zadovoljstvo_d4_10_11ne %>%
+  ggplot(aes(ocena, procent, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = zadovoljstvo_d4_10_11ne$srednja_vrednost_mediana,
+             lty=2, cex=1, color = "red") +
+  labs(title = "D4.10.: Poudarek na sprotnem preverjanju znanja študentov") +
+  facet_wrap(~ sifra_sp)
+
+```
+
+
+
+# D5. Splošna ocena zadovoljstva s študijem 
+## D5.1.: S študijem sem bil zadovoljen
+
+```{r}
+zadovoljstvo_d5_1 <- readxl::read_xlsx(zadovoljstvo_vprasalniki, sheet = "D5.1.", skip = 3) %>% 
+  clean_names() %>% 
+  separate(studijski_program_institucija, 
+           into = c("sifra_sp", "studijski_program_institucija"), 
+           sep = " ", remove = F, extra = "merge") %>% 
+  mutate(studijski_program_institucija = 
+           str_to_sentence(studijski_program_institucija)) %>% 
+    mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "V mariboru", "Univerza v Mariboru")) %>%
+  mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "Fakulteta", "Filozofska fakulteta")) %>% 
+  mutate(across(x1_sploh_ne:srednja_vrednost_mediana, ~ as.numeric(str_replace(.x, ",", "."))))
+
+```
+
+```{r}
+write.table(zadovoljstvo_d5_1, "data/zadovoljstvo_d5_1.txt", sep = "\t", dec = ",", fileEncoding = "UTF-8", row.names = F)
+zadovoljstvo_d5_1 <- read.table("data/zadovoljstvo_d5_1.txt", header = T, sep = "\t", dec = ",", fileEncoding = "UTF-8")
+
+```
+
+
+```{r}
+zadovoljstvo_d5_1_11ne <- zadovoljstvo_d5_1 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>%
+  group_by(sifra_sp, stopnja, srednja_vrednost_mediana) %>% 
+  # rename(x9_ne_zelim_odgovoriti = ne_zelim_odgovoriti) %>% 
+  pivot_longer(x1_sploh_ne:ne_zelim_odgovoriti, names_to = "ocena", values_to = "procent") %>% 
+  mutate(ocena = str_extract(ocena, "[\\d]"))  
+  kbl(zadovoljstvo_d5_1_11ne) %>% kable_classic(full_width = T, html_font = "Cambria")
+
+zadovoljstvo_d5_1_11ne %>%
+  ggplot(aes(ocena, procent, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = zadovoljstvo_d5_1_11ne$srednja_vrednost_mediana,
+             lty=2, cex=1, color = "red") +
+  labs(title = "D5.1.: S študijem sem bil zadovoljen") +
+  facet_wrap(~ sifra_sp)
+
+```
+
+
+
+# E1. Kako ste bili zadovoljni z delom naslednjih služb in vodstva fakultete: 
+## E1.1.: Referat za študentske zadeve
+
+
+```{r}
+zadovoljstvo_e1_1 <- readxl::read_xlsx(zadovoljstvo_vprasalniki, sheet = "E1.1.", skip = 3) %>% 
+  clean_names() %>% 
+  separate(studijski_program_institucija, 
+           into = c("sifra_sp", "studijski_program_institucija"), 
+           sep = " ", remove = F, extra = "merge") %>% 
+  mutate(studijski_program_institucija = 
+           str_to_sentence(studijski_program_institucija)) %>% 
+    mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "V mariboru", "Univerza v Mariboru")) %>%
+  mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "Fakulteta", "Filozofska fakulteta")) %>% 
+  mutate(across(x1_zelo_nezadovoljen:srednja_vrednost_mediana, ~ as.numeric(str_replace(.x, ",", "."))))
+
+```
+
+```{r}
+write.table(zadovoljstvo_e1_1, "data/zadovoljstvo_e1_1.txt", sep = "\t", dec = ",", fileEncoding = "UTF-8", row.names = F)
+zadovoljstvo_e1_1 <- read.table("data/zadovoljstvo_e1_1.txt", header = T, sep = "\t", dec = ",", fileEncoding = "UTF-8")
+
+```
+
+
+```{r}
+zadovoljstvo_e1_1_11ne <- zadovoljstvo_e1_1 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>%
+  group_by(sifra_sp, stopnja, srednja_vrednost_mediana) %>%
+  pivot_longer(x1_zelo_nezadovoljen:ne_zelim_odgovoriti, 
+               names_to = "ocena", values_to = "procent") %>% 
+  mutate(ocena = str_extract(ocena, "[\\d]"))  
+  kbl(zadovoljstvo_e1_1_11ne) %>% kable_classic(full_width = T, html_font = "Cambria")
+
+# weighted median
+library(matrixStats)
+w = rep(1, length(zadovoljstvo_e1_1_11ne$srednja_vrednost_mediana))
+wmedian = weightedMedian(zadovoljstvo_e1_1_11ne$srednja_vrednost_mediana, 
+                                         w = w, ties = "weighted")
+wmedian
+
+zadovoljstvo_e1_1_11ne %>%
+  ggplot(aes(ocena, procent, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = wmedian,lty=2, cex=1, color = "red") +
+  labs(title = "E1.1.: Referat za študentske zadeve") +
+  facet_wrap(~ sifra_sp)
+
+zadovoljstvo_e1_1_11ne %>%
+  ggplot(aes(ocena, procent, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = wmedian, lty=2, cex=1, color = "red") +
+  labs(title = "E1.1.: Referat za študentske zadeve") 
+
+```
+
+
+
+# E1. Kako ste bili zadovoljni z delom naslednjih služb in vodstva fakultete: 
+## E1.2.: Knjižnica
+
+```{r}
+zadovoljstvo_e1_2 <- readxl::read_xlsx(zadovoljstvo_vprasalniki, sheet = "E1.2.", skip = 3) %>% 
+  clean_names() %>% 
+  separate(studijski_program_institucija, 
+           into = c("sifra_sp", "studijski_program_institucija"), 
+           sep = " ", remove = F, extra = "merge") %>% 
+  mutate(studijski_program_institucija = 
+           str_to_sentence(studijski_program_institucija)) %>% 
+    mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "V mariboru", "Univerza v Mariboru")) %>%
+  mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "Fakulteta", "Filozofska fakulteta")) %>% 
+  mutate(across(x1_zelo_nezadovoljen:srednja_vrednost_mediana, ~ as.numeric(str_replace(.x, ",", "."))))
+
+```
+
+```{r}
+write.table(zadovoljstvo_e1_2, "data/zadovoljstvo_e1_2.txt", sep = "\t", dec = ",", fileEncoding = "UTF-8", row.names = F)
+zadovoljstvo_e1_2 <- read.table("data/zadovoljstvo_e1_2.txt", header = T, sep = "\t", dec = ",", fileEncoding = "UTF-8")
+
+```
+
+
+```{r}
+zadovoljstvo_e1_2_11ne <- zadovoljstvo_e1_2 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>%
+  group_by(sifra_sp, stopnja, srednja_vrednost_mediana) %>%
+  pivot_longer(x1_zelo_nezadovoljen:ne_zelim_odgovoriti, 
+               names_to = "ocena", values_to = "procent") %>% 
+  mutate(ocena = str_extract(ocena, "[\\d]"))  
+  kbl(zadovoljstvo_e1_2_11ne) %>% kable_classic(full_width = T, html_font = "Cambria")
+
+# weighted median
+library(matrixStats)
+w = rep(1, length(zadovoljstvo_e1_2_11ne$srednja_vrednost_mediana))
+wmedian = weightedMedian(zadovoljstvo_e1_2_11ne$srednja_vrednost_mediana, 
+                                         w = w, ties = "weighted")
+
+zadovoljstvo_e1_2_11ne %>%
+  ggplot(aes(ocena, procent, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = wmedian,lty=2, cex=1, color = "red") +
+  labs(title = "E1.2.: Knjižnica") +
+  facet_wrap(~ sifra_sp)
+
+zadovoljstvo_e1_2_11ne %>%
+  ggplot(aes(ocena, procent, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = wmedian, lty=2, cex=1, color = "red") +
+  labs(title = "E1.2.: Knjižnica") 
+
+```
+
+
+
+# E1. Kako ste bili zadovoljni z delom naslednjih služb in vodstva fakultete: 
+## E1.3.: Vodstvo fakultete
+
+
+```{r}
+zadovoljstvo_e1_3 <- readxl::read_xlsx(zadovoljstvo_vprasalniki, sheet = "E1.3.", skip = 3) %>% 
+  clean_names() %>% 
+  separate(studijski_program_institucija, 
+           into = c("sifra_sp", "studijski_program_institucija"), 
+           sep = " ", remove = F, extra = "merge") %>% 
+  mutate(studijski_program_institucija = 
+           str_to_sentence(studijski_program_institucija)) %>% 
+    mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "V mariboru", "Univerza v Mariboru")) %>%
+  mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "Fakulteta", "Filozofska fakulteta")) %>% 
+  mutate(across(x1_zelo_nezadovoljen:srednja_vrednost_mediana, ~ as.numeric(str_replace(.x, ",", "."))))
+
+```
+
+```{r}
+write.table(zadovoljstvo_e1_3, "data/zadovoljstvo_e1_3.txt", sep = "\t", dec = ",", fileEncoding = "UTF-8", row.names = F)
+zadovoljstvo_e1_3 <- read.table("data/zadovoljstvo_e1_3.txt", header = T, sep = "\t", dec = ",", fileEncoding = "UTF-8")
+
+```
+
+
+```{r}
+zadovoljstvo_e1_3_11ne <- zadovoljstvo_e1_3 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>%
+  group_by(sifra_sp, stopnja, srednja_vrednost_mediana) %>%
+  pivot_longer(x1_zelo_nezadovoljen:ne_zelim_odgovoriti, 
+               names_to = "ocena", values_to = "procent") %>% 
+  mutate(ocena = str_extract(ocena, "[\\d]"))  
+  kbl(zadovoljstvo_e1_3_11ne) %>% kable_classic(full_width = T, html_font = "Cambria")
+
+# weighted median
+library(matrixStats)
+w = rep(1, length(zadovoljstvo_e1_3_11ne$srednja_vrednost_mediana))
+wmedian = weightedMedian(zadovoljstvo_e1_3_11ne$srednja_vrednost_mediana, 
+                                         w = w, ties = "weighted")
+
+zadovoljstvo_e1_3_11ne %>%
+  ggplot(aes(ocena, procent, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = wmedian,lty=2, cex=1, color = "red") +
+  labs(title = "E1.3.: Vodstvo fakultete") +
+  facet_wrap(~ sifra_sp)
+
+zadovoljstvo_e1_3_11ne %>%
+  ggplot(aes(ocena, procent, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = wmedian, lty=2, cex=1, color = "red") +
+  labs(title = "E1.3.: Vodstvo fakultete") 
+
+```
+
+
+
+# E1. Kako ste bili zadovoljni z delom naslednjih služb in vodstva fakultete: 
+## E1.4.: Ostali nepedagoški delavci
+
+```{r}
+zadovoljstvo_e1_4 <- readxl::read_xlsx(zadovoljstvo_vprasalniki, sheet = "E1.4.", skip = 3) %>% 
+  clean_names() %>% 
+  separate(studijski_program_institucija, 
+           into = c("sifra_sp", "studijski_program_institucija"), 
+           sep = " ", remove = F, extra = "merge") %>% 
+  mutate(studijski_program_institucija = 
+           str_to_sentence(studijski_program_institucija)) %>% 
+    mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "V mariboru", "Univerza v Mariboru")) %>%
+  mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "Fakulteta", "Filozofska fakulteta")) %>% 
+  mutate(across(x1_zelo_nezadovoljen:srednja_vrednost_mediana, ~ as.numeric(str_replace(.x, ",", "."))))
+
+```
+
+```{r}
+write.table(zadovoljstvo_e1_4, "data/zadovoljstvo_e1_4.txt", sep = "\t", dec = ",", fileEncoding = "UTF-8", row.names = F)
+zadovoljstvo_e1_4 <- read.table("data/zadovoljstvo_e1_4.txt", header = T, sep = "\t", dec = ",", fileEncoding = "UTF-8")
+
+```
+
+
+```{r}
+zadovoljstvo_e1_4_11ne <- zadovoljstvo_e1_4 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>%
+  group_by(sifra_sp, stopnja, srednja_vrednost_mediana) %>%
+  pivot_longer(x1_zelo_nezadovoljen:ne_zelim_odgovoriti, 
+               names_to = "ocena", values_to = "procent") %>% 
+  mutate(ocena = str_extract(ocena, "[\\d]"))  
+  kbl(zadovoljstvo_e1_4_11ne) %>% kable_classic(full_width = T, html_font = "Cambria")
+
+# weighted median
+library(matrixStats)
+w = rep(1, length(zadovoljstvo_e1_4_11ne$srednja_vrednost_mediana))
+wmedian = weightedMedian(zadovoljstvo_e1_4_11ne$srednja_vrednost_mediana, 
+                                         w = w, ties = "weighted")
+
+zadovoljstvo_e1_4_11ne %>%
+  ggplot(aes(ocena, procent, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = wmedian,lty=2, cex=1, color = "red") +
+  labs(title = "E1.4.: Ostali nepedagoški delavci") +
+  facet_wrap(~ sifra_sp)
+
+zadovoljstvo_e1_4_11ne %>%
+  ggplot(aes(ocena, procent, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = wmedian, lty=2, cex=1, color = "red") +
+  labs(title = "E1.4.: Ostali nepedagoški delavci") 
+
+```
+
+
+
+# F1. Opredelite vaše zadovoljstvo glede na podane trditve. 
+## F1.1.: Prostori fakultete so primerni.
+
+```{r}
+zadovoljstvo_f1_1 <- readxl::read_xlsx(zadovoljstvo_vprasalniki, sheet = "F1.1.", skip = 3) %>% 
+  clean_names() %>% 
+  separate(studijski_program_institucija, 
+           into = c("sifra_sp", "studijski_program_institucija"), 
+           sep = " ", remove = F, extra = "merge") %>% 
+  mutate(studijski_program_institucija = 
+           str_to_sentence(studijski_program_institucija)) %>% 
+    mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "V mariboru", "Univerza v Mariboru")) %>%
+  mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "Fakulteta", "Filozofska fakulteta")) %>% 
+  mutate(across(x1_sploh_ne:srednja_vrednost_mediana, ~ as.numeric(str_replace(.x, ",", "."))))
+
+```
+
+```{r}
+write.table(zadovoljstvo_f1_1, "data/zadovoljstvo_f1_1.txt", sep = "\t", dec = ",", fileEncoding = "UTF-8", row.names = F)
+zadovoljstvo_f1_1 <- read.table("data/zadovoljstvo_f1_1.txt", header = T, sep = "\t", dec = ",", fileEncoding = "UTF-8")
+
+```
+
+
+```{r}
+zadovoljstvo_f1_1_11ne <- zadovoljstvo_f1_1 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>%
+  group_by(sifra_sp, stopnja, srednja_vrednost_mediana) %>%
+  pivot_longer(x1_sploh_ne:ne_zelim_odgovoriti, 
+               names_to = "ocena", values_to = "procent") %>% 
+  mutate(ocena = str_extract(ocena, "[\\d]"))  
+  kbl(zadovoljstvo_f1_1_11ne) %>% kable_classic(full_width = T, html_font = "Cambria")
+
+# weighted median
+library(matrixStats)
+w = rep(1, length(zadovoljstvo_f1_1_11ne$srednja_vrednost_mediana))
+wmedian = weightedMedian(zadovoljstvo_f1_1_11ne$srednja_vrednost_mediana, 
+                                         w = w, ties = "weighted")
+print(glue::glue("Tehtana srednja vrednost ocene (mediana) = ", { wmedian }))
+
+zadovoljstvo_f1_1_11ne %>%
+  ggplot(aes(ocena, procent, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = wmedian,lty=2, cex=1, color = "red") +
+  labs(title = "F1.1.: Prostori fakultete so primerni") +
+  facet_wrap(~ sifra_sp)
+
+zadovoljstvo_f1_1_11ne %>%
+  add_count(sifra_sp) %>% 
+  ggplot(aes(ocena, procent/n, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = wmedian, lty=2, cex=1, color = "red") +
+  labs(title = "F1.1.: Prostori fakultete so primerni") 
+
+```
+
+
+# F1. Opredelite vaše zadovoljstvo glede na podane trditve. 
+## F1.2.: V knjižnici in na spletu sem dobil/a vsa za študij potrebna gradiva.
+
+```{r}
+zadovoljstvo_f1_2 <- readxl::read_xlsx(zadovoljstvo_vprasalniki, sheet = "F1.2.", skip = 3) %>% 
+  clean_names() %>% 
+  separate(studijski_program_institucija, 
+           into = c("sifra_sp", "studijski_program_institucija"), 
+           sep = " ", remove = F, extra = "merge") %>% 
+  mutate(studijski_program_institucija = 
+           str_to_sentence(studijski_program_institucija)) %>% 
+    mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "V mariboru", "Univerza v Mariboru")) %>%
+  mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "Fakulteta", "Filozofska fakulteta")) %>% 
+  mutate(across(x1_sploh_ne:srednja_vrednost_mediana, ~ as.numeric(str_replace(.x, ",", "."))))
+
+```
+
+```{r}
+write.table(zadovoljstvo_f1_2, "data/zadovoljstvo_f1_2.txt", sep = "\t", dec = ",", fileEncoding = "UTF-8", row.names = F)
+zadovoljstvo_f1_2 <- read.table("data/zadovoljstvo_f1_2.txt", header = T, sep = "\t", dec = ",", fileEncoding = "UTF-8")
+
+```
+
+
+```{r}
+zadovoljstvo_f1_2_11ne <- zadovoljstvo_f1_2 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>%
+  group_by(sifra_sp, stopnja, srednja_vrednost_mediana) %>%
+  pivot_longer(x1_sploh_ne:ne_zelim_odgovoriti, 
+               names_to = "ocena", values_to = "procent") %>% 
+  mutate(ocena = str_extract(ocena, "[\\d]"))  
+  kbl(zadovoljstvo_f1_2_11ne) %>% kable_classic(full_width = T, html_font = "Cambria")
+
+# weighted median
+library(matrixStats)
+w = rep(1, length(zadovoljstvo_f1_2_11ne$srednja_vrednost_mediana))
+wmedian = weightedMedian(zadovoljstvo_f1_2_11ne$srednja_vrednost_mediana, 
+                                         w = w, ties = "weighted")
+
+zadovoljstvo_f1_2_11ne %>%
+  ggplot(aes(ocena, procent, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = wmedian,lty=2, cex=1, color = "red") +
+  labs(title = "F1.2.: V knjižnici in na spletu sem dobil/a vsa za študij potrebna gradiva") +
+  facet_wrap(~ sifra_sp)
+
+zadovoljstvo_f1_2_11ne %>%
+  add_count(sifra_sp) %>% 
+  ggplot(aes(ocena, procent/n, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = wmedian, lty=2, cex=1, color = "red") +
+  labs(title = "F1.2.: V knjižnici in na spletu sem dobil/a vsa za študij potrebna gradiva: 11NE") 
+
+```
+
+
+
+# F1. Opredelite vaše zadovoljstvo glede na podane trditve. 
+## F1.3.: Vsa potrebna programska orodja so mi bila na voljo.
+
+```{r}
+zadovoljstvo_f1_3 <- readxl::read_xlsx(zadovoljstvo_vprasalniki, sheet = "F1.3.", skip = 3) %>% 
+  clean_names() %>% 
+  separate(studijski_program_institucija, 
+           into = c("sifra_sp", "studijski_program_institucija"), 
+           sep = " ", remove = F, extra = "merge") %>% 
+  mutate(studijski_program_institucija = 
+           str_to_sentence(studijski_program_institucija)) %>% 
+    mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "V mariboru", "Univerza v Mariboru")) %>%
+  mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "Fakulteta", "Filozofska fakulteta")) %>% 
+  mutate(across(x1_sploh_ne:srednja_vrednost_mediana, ~ as.numeric(str_replace(.x, ",", "."))))
+
+
+```
+
+```{r}
+write.table(zadovoljstvo_f1_3, "data/zadovoljstvo_f1_3.txt", sep = "\t", dec = ",", fileEncoding = "UTF-8", row.names = F)
+zadovoljstvo_f1_3 <- read.table("data/zadovoljstvo_f1_3.txt", header = T, sep = "\t", dec = ",", fileEncoding = "UTF-8")
+
+```
+
+
+```{r}
+zadovoljstvo_f1_3_11ne <- zadovoljstvo_f1_3 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>%
+  group_by(sifra_sp, stopnja, srednja_vrednost_mediana) %>%
+  pivot_longer(x1_sploh_ne:ne_zelim_odgovoriti, 
+               names_to = "ocena", values_to = "procent") %>% 
+  mutate(ocena = str_extract(ocena, "[\\d]"))  
+  kbl(zadovoljstvo_f1_3_11ne) %>% kable_classic(full_width = T, html_font = "Cambria")
+
+# weighted median
+library(matrixStats)
+w = rep(1, length(zadovoljstvo_f1_3_11ne$srednja_vrednost_mediana))
+wmedian = weightedMedian(zadovoljstvo_f1_3_11ne$srednja_vrednost_mediana, 
+                                         w = w, ties = "weighted")
+
+zadovoljstvo_f1_3_11ne %>%
+  ggplot(aes(ocena, procent, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = wmedian,lty=2, cex=1, color = "red") +
+  labs(title = "F1.3.: Vsa potrebna programska orodja so mi bila na voljo.") +
+  facet_wrap(~ sifra_sp)
+
+zadovoljstvo_f1_3_11ne %>%
+  add_count(sifra_sp) %>% 
+  ggplot(aes(ocena, procent/n, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = wmedian, lty=2, cex=1, color = "red") +
+  labs(title = "F1.3.: Vsa potrebna programska orodja so mi bila na voljo") 
+
+```
+
+
+
+# G1.: Prosimo, ocenite svojo raven doseganja posamezne kompetence. 
+## G1.1: Strokovnost na svojem področju
+
+```{r}
+zadovoljstvo_g1_1 <- readxl::read_xlsx(zadovoljstvo_vprasalniki, sheet = "G1.1.", skip = 3) %>% 
+  clean_names()  %>% 
+  separate(studijski_program_institucija, 
+           into = c("sifra_sp", "studijski_program_institucija"), 
+           sep = " ", remove = F, extra = "merge") %>% 
+  mutate(studijski_program_institucija = 
+           str_to_sentence(studijski_program_institucija)) %>% 
+    mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "V mariboru", "Univerza v Mariboru")) %>%
+  mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "Fakulteta", "Filozofska fakulteta")) %>% 
+  mutate(across(x1_zelo_nizka:srednja_vrednost_mediana, ~ as.numeric(str_replace(.x, ",", "."))))
+
+
+```
+
+```{r}
+write.table(zadovoljstvo_g1_1, "data/zadovoljstvo_g1_1.txt", sep = "\t", dec = ",", fileEncoding = "UTF-8", row.names = F)
+zadovoljstvo_g1_1 <- read.table("data/zadovoljstvo_g1_1.txt", header = T, sep = "\t", dec = ",", fileEncoding = "UTF-8")
+
+```
+
+
+```{r}
+zadovoljstvo_g1_1_11ne <- zadovoljstvo_g1_1 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>%
+  group_by(sifra_sp, stopnja, srednja_vrednost_mediana) %>%
+  pivot_longer(x1_zelo_nizka:ne_zelim_odgovoriti, 
+               names_to = "ocena", values_to = "procent") %>% 
+  mutate(ocena = str_extract(ocena, "[\\d]"))  
+  kbl(zadovoljstvo_g1_1_11ne) %>% kable_classic(full_width = T, html_font = "Cambria")
+
+# weighted median
+library(matrixStats)
+w = rep(1, length(zadovoljstvo_g1_1_11ne$srednja_vrednost_mediana))
+wmedian = weightedMedian(zadovoljstvo_g1_1_11ne$srednja_vrednost_mediana, 
+                                         w = w, ties = "weighted")
+
+zadovoljstvo_g1_1_11ne %>%
+  ggplot(aes(ocena, procent, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = wmedian,lty=2, cex=1, color = "red") +
+  labs(title = "G1.1: Strokovnost na svojem področju.") +
+  facet_wrap(~ sifra_sp)
+
+zadovoljstvo_g1_1_11ne %>%
+  add_count(sifra_sp) %>% 
+  ggplot(aes(ocena, procent/n, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = wmedian, lty=2, cex=1, color = "red") +
+  labs(title = "G1.1: Strokovnost na svojem področju") 
+
+```
+
+
+
+# G1.: Prosimo, ocenite svojo raven doseganja posamezne kompetence. 
+## G1.2.: Praksa na svojem področju
+
+```{r}
+zadovoljstvo_g1_2 <- readxl::read_xlsx(zadovoljstvo_vprasalniki, 
+                                       sheet = "G1.2.", skip = 3) %>% 
+  clean_names() %>% 
+  separate(studijski_program_institucija, 
+           into = c("sifra_sp", "studijski_program_institucija"), 
+           sep = " ", remove = F, extra = "merge") %>% 
+  mutate(studijski_program_institucija = 
+           str_to_sentence(studijski_program_institucija)) %>% 
+    mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "V mariboru", "Univerza v Mariboru")) %>%
+  mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "Fakulteta", "Filozofska fakulteta")) %>% 
+  mutate(across(x1_zelo_nizka:srednja_vrednost_mediana, ~ as.numeric(str_replace(.x, ",", "."))))
+
+```
+
+```{r}
+write.table(zadovoljstvo_g1_2, "data/zadovoljstvo_g1_2.txt", sep = "\t", dec = ",", fileEncoding = "UTF-8", row.names = F)
+zadovoljstvo_g1_2 <- read.table("data/zadovoljstvo_g1_2.txt", header = T, sep = "\t", dec = ",", fileEncoding = "UTF-8")
+
+```
+
+
+```{r}
+zadovoljstvo_g1_2_11ne <- zadovoljstvo_g1_2 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>%
+  group_by(sifra_sp, stopnja, srednja_vrednost_mediana) %>%
+  pivot_longer(x1_zelo_nizka:ne_zelim_odgovoriti, 
+               names_to = "ocena", values_to = "procent") %>% 
+  mutate(ocena = str_extract(ocena, "[\\d]"))  
+  kbl(zadovoljstvo_g1_2_11ne) %>% kable_classic(full_width = T, html_font = "Cambria")
+
+# weighted median
+library(matrixStats)
+w = rep(1, length(zadovoljstvo_g1_2_11ne$srednja_vrednost_mediana))
+wmedian = weightedMedian(zadovoljstvo_g1_2_11ne$srednja_vrednost_mediana, 
+                                         w = w, ties = "weighted")
+wmedian
+
+zadovoljstvo_g1_2_11ne %>%
+  ggplot(aes(ocena, procent, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = wmedian,lty=2, cex=1, color = "red") +
+  labs(title = "G1.2.: Praksa na svojem področju.") +
+  facet_wrap(~ sifra_sp)
+
+zadovoljstvo_g1_2_11ne %>%
+  add_count(sifra_sp) %>% 
+  ggplot(aes(ocena, procent/n, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = wmedian, lty=2, cex=1, color = "red") +
+  labs(title = "G1.2.: Praksa na svojem področju") 
+
+```
+
+
+
+# G1.: Prosimo, ocenite svojo raven doseganja posamezne kompetence.
+## G1.3.: Znanje na drugih področjih
+
+```{r}
+zadovoljstvo_g1_3 <- readxl::read_xlsx(zadovoljstvo_vprasalniki, sheet = "G1.3.", skip = 3) %>% 
+  clean_names() %>% 
+  separate(studijski_program_institucija, 
+           into = c("sifra_sp", "studijski_program_institucija"), 
+           sep = " ", remove = F, extra = "merge") %>% 
+  mutate(studijski_program_institucija = 
+           str_to_sentence(studijski_program_institucija)) %>% 
+    mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "V mariboru", "Univerza v Mariboru")) %>%
+  mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "Fakulteta", "Filozofska fakulteta")) %>% 
+  mutate(across(x1_zelo_nizka:srednja_vrednost_mediana, ~ as.numeric(str_replace(.x, ",", "."))))
+
+```
+
+```{r}
+write.table(zadovoljstvo_g1_3, "data/zadovoljstvo_g1_3.txt", sep = "\t", dec = ",", fileEncoding = "UTF-8", row.names = F)
+zadovoljstvo_g1_3 <- read.table("data/zadovoljstvo_g1_3.txt", header = T, sep = "\t", dec = ",", fileEncoding = "UTF-8")
+
+```
+
+1. stopnja
+
+```{r}
+zadovoljstvo_g1_3_11ne <- zadovoljstvo_g1_3 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>%
+  group_by(sifra_sp, stopnja, srednja_vrednost_mediana) %>%
+  pivot_longer(x1_zelo_nizka:ne_zelim_odgovoriti, 
+               names_to = "ocena", values_to = "procent") %>% 
+  mutate(ocena = str_extract(ocena, "[\\d]"))  
+  kbl(zadovoljstvo_g1_3_11ne) %>% kable_classic(full_width = T, html_font = "Cambria")
+
+# weighted median
+library(matrixStats)
+w = rep(1, length(zadovoljstvo_g1_3_11ne$srednja_vrednost_mediana))
+wmedian = weightedMedian(zadovoljstvo_g1_3_11ne$srednja_vrednost_mediana, 
+                                         w = w, ties = "weighted")
+
+zadovoljstvo_g1_3_11ne %>%
+  ggplot(aes(ocena, procent, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = wmedian,lty=2, cex=1, color = "red") +
+  labs(title = "G1.3.: Znanje na drugih področjih.") +
+  facet_wrap(~ sifra_sp)
+
+zadovoljstvo_g1_3_11ne %>%
+  add_count(sifra_sp) %>% 
+  ggplot(aes(ocena, procent/n, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = wmedian, lty=2, cex=1, color = "red") +
+  labs(title = "G1.3.: Znanje na drugih področjih") 
+
+```
+
+
+
+# G1.: Prosimo, ocenite svojo raven doseganja posamezne kompetence. 
+## G1.4: Analitično  razmišljanje
+
+```{r}
+zadovoljstvo_g1_4 <- readxl::read_xlsx(zadovoljstvo_vprasalniki, sheet = "G1.4.", skip = 3) %>% 
+  clean_names() %>% 
+  separate(studijski_program_institucija, 
+           into = c("sifra_sp", "studijski_program_institucija"), 
+           sep = " ", remove = F, extra = "merge") %>% 
+  mutate(studijski_program_institucija = 
+           str_to_sentence(studijski_program_institucija)) %>% 
+    mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "V mariboru", "Univerza v Mariboru")) %>%
+  mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "Fakulteta", "Filozofska fakulteta")) %>% 
+  mutate(across(x1_zelo_nizka:srednja_vrednost_mediana, ~ as.numeric(str_replace(.x, ",", "."))))
+
+```
+
+```{r}
+write.table(zadovoljstvo_g1_4, "data/zadovoljstvo_g1_4.txt", sep = "\t", dec = ",", fileEncoding = "UTF-8", row.names = F)
+zadovoljstvo_g1_4 <- read.table("data/zadovoljstvo_g1_4.txt", header = T, sep = "\t", dec = ",", fileEncoding = "UTF-8")
+
+```
+
+
+```{r}
+zadovoljstvo_g1_4_11ne <- zadovoljstvo_g1_4 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>%
+  group_by(sifra_sp, stopnja, srednja_vrednost_mediana) %>%
+  pivot_longer(x1_zelo_nizka:ne_zelim_odgovoriti, 
+               names_to = "ocena", values_to = "procent") %>% 
+  mutate(ocena = str_extract(ocena, "[\\d]"))  
+  kbl(zadovoljstvo_g1_4_11ne) %>% kable_classic(full_width = T, html_font = "Cambria")
+
+# weighted median
+library(matrixStats)
+w = rep(1, length(zadovoljstvo_g1_4_11ne$srednja_vrednost_mediana))
+wmedian = weightedMedian(zadovoljstvo_g1_4_11ne$srednja_vrednost_mediana, 
+                                         w = w, ties = "weighted")
+
+zadovoljstvo_g1_4_11ne %>%
+  ggplot(aes(ocena, procent, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = wmedian,lty=2, cex=1, color = "red") +
+  labs(title = "G1.4: Analitično  razmišljanje.") +
+  facet_wrap(~ sifra_sp)
+
+zadovoljstvo_g1_4_11ne %>%
+  add_count(sifra_sp) %>% 
+  ggplot(aes(ocena, procent/n, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = wmedian, lty=2, cex=1, color = "red") +
+  labs(title = "G1.4: Analitično  razmišljanje") 
+
+```
+
+
+
+# G1.: Prosimo, ocenite svojo raven doseganja posamezne kompetence. 
+## G1.5: Sposobnost iskanja novih idej in rešitev
+
+```{r}
+zadovoljstvo_g1_5 <- readxl::read_xlsx(zadovoljstvo_vprasalniki, sheet = "G1.5.", skip = 3) %>% 
+  clean_names() %>% 
+  separate(studijski_program_institucija, 
+           into = c("sifra_sp", "studijski_program_institucija"), 
+           sep = " ", remove = F, extra = "merge") %>% 
+  mutate(studijski_program_institucija = 
+           str_to_sentence(studijski_program_institucija)) %>% 
+    mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "V mariboru", "Univerza v Mariboru")) %>%
+  mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "Fakulteta", "Filozofska fakulteta")) %>% 
+  mutate(across(x1_zelo_nizka:srednja_vrednost_mediana, ~ as.numeric(str_replace(.x, ",", "."))))
+
+```
+
+```{r}
+write.table(zadovoljstvo_g1_5, "data/zadovoljstvo_g1_5.txt", sep = "\t", dec = ",", fileEncoding = "UTF-8", row.names = F)
+zadovoljstvo_g1_5 <- read.table("data/zadovoljstvo_g1_5.txt", header = T, sep = "\t", dec = ",", fileEncoding = "UTF-8")
+
+```
+
+1. stopnja
+
+```{r}
+zadovoljstvo_g1_5_11ne <- zadovoljstvo_g1_5 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>%
+  group_by(sifra_sp, stopnja, srednja_vrednost_mediana) %>%
+  pivot_longer(x1_zelo_nizka:ne_zelim_odgovoriti, 
+               names_to = "ocena", values_to = "procent") %>% 
+  mutate(ocena = str_extract(ocena, "[\\d]"))  
+  kbl(zadovoljstvo_g1_5_11ne) %>% kable_classic(full_width = T, html_font = "Cambria")
+
+# weighted median
+library(matrixStats)
+w = rep(1, length(zadovoljstvo_g1_5_11ne$srednja_vrednost_mediana))
+wmedian = weightedMedian(zadovoljstvo_g1_5_11ne$srednja_vrednost_mediana, 
+                                         w = w, ties = "weighted")
+
+zadovoljstvo_g1_5_11ne %>%
+  ggplot(aes(ocena, procent, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = wmedian,lty=2, cex=1, color = "red") +
+  labs(title = "G1.5: Sposobnost iskanja novih idej in rešitev.") +
+  facet_wrap(~ sifra_sp)
+
+zadovoljstvo_g1_5_11ne %>%
+  add_count(sifra_sp) %>% 
+  ggplot(aes(ocena, procent/n, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = wmedian, lty=2, cex=1, color = "red") +
+  labs(title = "G1.5: Sposobnost iskanja novih idej in rešitev") 
+
+```
+
+
+
+# G1.: Prosimo, ocenite svojo raven doseganja posamezne kompetence. 
+## G1.6: Sposobnost hitrega usvajanja novega znanja
+
+```{r}
+zadovoljstvo_g1_6 <- readxl::read_xlsx(zadovoljstvo_vprasalniki, sheet = "G1.6.", skip = 3) %>% 
+  clean_names() %>% 
+  separate(studijski_program_institucija, 
+           into = c("sifra_sp", "studijski_program_institucija"), 
+           sep = " ", remove = F, extra = "merge") %>% 
+  mutate(studijski_program_institucija = 
+           str_to_sentence(studijski_program_institucija)) %>% 
+    mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "V mariboru", "Univerza v Mariboru")) %>%
+  mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "Fakulteta", "Filozofska fakulteta")) %>% 
+  mutate(across(x1_zelo_nizka:srednja_vrednost_mediana, ~ as.numeric(str_replace(.x, ",", "."))))
+
+```
+
+```{r}
+write.table(zadovoljstvo_g1_6, "data/zadovoljstvo_g1_6.txt", sep = "\t", dec = ",", fileEncoding = "UTF-8", row.names = F)
+zadovoljstvo_g1_6 <- read.table("data/zadovoljstvo_g1_6.txt", header = T, sep = "\t", dec = ",", fileEncoding = "UTF-8")
+
+```
+
+
+```{r}
+zadovoljstvo_g1_6_11ne <- zadovoljstvo_g1_6 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>%
+  group_by(sifra_sp, stopnja, srednja_vrednost_mediana) %>%
+  pivot_longer(x1_zelo_nizka:ne_zelim_odgovoriti, 
+               names_to = "ocena", values_to = "procent") %>% 
+  mutate(ocena = str_extract(ocena, "[\\d]"))  
+  kbl(zadovoljstvo_g1_6_11ne) %>% kable_classic(full_width = T, html_font = "Cambria")
+
+# weighted median
+library(matrixStats)
+w = rep(1, length(zadovoljstvo_g1_6_11ne$srednja_vrednost_mediana))
+wmedian = weightedMedian(zadovoljstvo_g1_6_11ne$srednja_vrednost_mediana, 
+                                         w = w, ties = "weighted")
+
+zadovoljstvo_g1_6_11ne %>%
+  ggplot(aes(ocena, procent, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = wmedian,lty=2, cex=1, color = "red") +
+  labs(title = "G1.6: Sposobnost hitrega usvajanja novega znanja.") +
+  facet_wrap(~ sifra_sp)
+
+zadovoljstvo_g1_6_11ne %>%
+  add_count(sifra_sp) %>% 
+  ggplot(aes(ocena, procent/n, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = wmedian, lty=2, cex=1, color = "red") +
+  labs(title = "G1.6: Sposobnost hitrega usvajanja novega znanja") 
+
+```
+
+
+
+# G1.: Prosimo, ocenite svojo raven doseganja posamezne kompetence. 
+## G1.7: Sposobnost uspešnega dela pod stresom
+
+```{r}
+zadovoljstvo_g1_7 <- readxl::read_xlsx(zadovoljstvo_vprasalniki, sheet = "G1.7.", skip = 3) %>% 
+  clean_names() %>% 
+  separate(studijski_program_institucija, 
+           into = c("sifra_sp", "studijski_program_institucija"), 
+           sep = " ", remove = F, extra = "merge") %>% 
+  mutate(studijski_program_institucija = 
+           str_to_sentence(studijski_program_institucija)) %>% 
+    mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "V mariboru", "Univerza v Mariboru")) %>%
+  mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "Fakulteta", "Filozofska fakulteta")) %>% 
+  mutate(across(x1_zelo_nizka:srednja_vrednost_mediana, ~ as.numeric(str_replace(.x, ",", "."))))
+
+```
+
+```{r}
+write.table(zadovoljstvo_g1_7, "data/zadovoljstvo_g1_7.txt", sep = "\t", dec = ",", fileEncoding = "UTF-8", row.names = F)
+zadovoljstvo_g1_7 <- read.table("data/zadovoljstvo_g1_7.txt", header = T, sep = "\t", dec = ",", fileEncoding = "UTF-8")
+
+```
+
+
+```{r}
+zadovoljstvo_g1_7_11ne <- zadovoljstvo_g1_7 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>%
+  group_by(sifra_sp, stopnja, srednja_vrednost_mediana) %>%
+  pivot_longer(x1_zelo_nizka:ne_zelim_odgovoriti, 
+               names_to = "ocena", values_to = "procent") %>% 
+  mutate(ocena = str_extract(ocena, "[\\d]"))  
+  kbl(zadovoljstvo_g1_7_11ne) %>% kable_classic(full_width = T, html_font = "Cambria")
+
+# weighted median
+library(matrixStats)
+w = rep(1, length(zadovoljstvo_g1_7_11ne$srednja_vrednost_mediana))
+wmedian = weightedMedian(zadovoljstvo_g1_7_11ne$srednja_vrednost_mediana, 
+                                         w = w, ties = "weighted")
+
+zadovoljstvo_g1_7_11ne %>%
+  ggplot(aes(ocena, procent, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = wmedian,lty=2, cex=1, color = "red") +
+  labs(title = "G1.7: Sposobnost uspešnega dela pod stresom.") +
+  facet_wrap(~ sifra_sp)
+
+zadovoljstvo_g1_7_11ne %>%
+  add_count(sifra_sp) %>% 
+  ggplot(aes(ocena, procent/n, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = wmedian, lty=2, cex=1, color = "red") +
+  labs(title = "G1.7: Sposobnost uspešnega dela pod stresom") 
+
+```
+
+
+
+# G1.: Prosimo, ocenite svojo raven doseganja posamezne kompetence. 
+## G1.8: Sposobnost učinkovite porabe časa
+
+```{r}
+zadovoljstvo_g1_8 <- readxl::read_xlsx(zadovoljstvo_vprasalniki, sheet = "G1.8.", skip = 3) %>% 
+  clean_names() %>% 
+  separate(studijski_program_institucija, 
+           into = c("sifra_sp", "studijski_program_institucija"), 
+           sep = " ", remove = F, extra = "merge") %>% 
+  mutate(studijski_program_institucija = 
+           str_to_sentence(studijski_program_institucija)) %>% 
+    mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "V mariboru", "Univerza v Mariboru")) %>%
+  mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "Fakulteta", "Filozofska fakulteta")) %>% 
+  mutate(across(x1_zelo_nizka:srednja_vrednost_mediana, ~ as.numeric(str_replace(.x, ",", "."))))
+
+```
+
+```{r}
+write.table(zadovoljstvo_g1_8, "data/zadovoljstvo_g1_8.txt", sep = "\t", dec = ",", fileEncoding = "UTF-8", row.names = F)
+zadovoljstvo_g1_8 <- read.table("data/zadovoljstvo_g1_8.txt", header = T, sep = "\t", dec = ",", fileEncoding = "UTF-8")
+
+```
+
+
+```{r}
+zadovoljstvo_g1_8_11ne <- zadovoljstvo_g1_8 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>%
+  group_by(sifra_sp, stopnja, srednja_vrednost_mediana) %>%
+  pivot_longer(x1_zelo_nizka:ne_zelim_odgovoriti, 
+               names_to = "ocena", values_to = "procent") %>% 
+  mutate(ocena = str_extract(ocena, "[\\d]"))  
+  kbl(zadovoljstvo_g1_8_11ne) %>% kable_classic(full_width = T, html_font = "Cambria")
+
+# weighted median
+library(matrixStats)
+w = rep(1, length(zadovoljstvo_g1_8_11ne$srednja_vrednost_mediana))
+wmedian = weightedMedian(zadovoljstvo_g1_8_11ne$srednja_vrednost_mediana, 
+                                         w = w, ties = "weighted")
+
+zadovoljstvo_g1_8_11ne %>%
+  ggplot(aes(ocena, procent, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = wmedian,lty=2, cex=1, color = "red") +
+  labs(title = "G1.8: Sposobnost učinkovite porabe časa.") +
+  facet_wrap(~ sifra_sp)
+
+zadovoljstvo_g1_8_11ne %>%
+  add_count(sifra_sp) %>% 
+  ggplot(aes(ocena, procent/n, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = wmedian, lty=2, cex=1, color = "red") +
+  labs(title = "G1.8: Sposobnost učinkovite porabe časa") 
+
+```
+
+
+
+# G1.: Prosimo, ocenite svojo raven doseganja posamezne kompetence. 
+## G1.9: Sposobnost koordinacije aktivnosti
+
+```{r}
+zadovoljstvo_g1_9 <- readxl::read_xlsx(zadovoljstvo_vprasalniki, sheet = "G1.9.", skip = 3) %>% 
+  clean_names()  %>% 
+  separate(studijski_program_institucija, 
+           into = c("sifra_sp", "studijski_program_institucija"), 
+           sep = " ", remove = F, extra = "merge") %>% 
+  mutate(studijski_program_institucija = 
+           str_to_sentence(studijski_program_institucija)) %>% 
+    mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "V mariboru", "Univerza v Mariboru")) %>%
+  mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "Fakulteta", "Filozofska fakulteta")) %>% 
+  mutate(across(x1_zelo_nizka:srednja_vrednost_mediana, ~ as.numeric(str_replace(.x, ",", "."))))
+
+```
+
+```{r}
+write.table(zadovoljstvo_g1_9, "data/zadovoljstvo_g1_9.txt", sep = "\t", dec = ",", fileEncoding = "UTF-8", row.names = F)
+zadovoljstvo_g1_9 <- read.table("data/zadovoljstvo_g1_9.txt", header = T, sep = "\t", dec = ",", fileEncoding = "UTF-8")
+
+```
+
+
+```{r}
+zadovoljstvo_g1_9_11ne <- zadovoljstvo_g1_9 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>%
+  group_by(sifra_sp, stopnja, srednja_vrednost_mediana) %>%
+  pivot_longer(x1_zelo_nizka:ne_zelim_odgovoriti, 
+               names_to = "ocena", values_to = "procent") %>% 
+  mutate(ocena = str_extract(ocena, "[\\d]"))  
+  kbl(zadovoljstvo_g1_9_11ne) %>% kable_classic(full_width = T, html_font = "Cambria")
+
+# weighted median
+library(matrixStats)
+w = rep(1, length(zadovoljstvo_g1_9_11ne$srednja_vrednost_mediana))
+wmedian = weightedMedian(zadovoljstvo_g1_9_11ne$srednja_vrednost_mediana, 
+                                         w = w, ties = "weighted")
+
+zadovoljstvo_g1_9_11ne %>%
+  ggplot(aes(ocena, procent, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = wmedian,lty=2, cex=1, color = "red") +
+  labs(title = "G1.9: Sposobnost koordinacije aktivnosti.") +
+  facet_wrap(~ sifra_sp)
+
+zadovoljstvo_g1_9_11ne %>%
+  add_count(sifra_sp) %>% 
+  ggplot(aes(ocena, procent/n, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = wmedian, lty=2, cex=1, color = "red") +
+  labs(title = "G1.9: Sposobnost koordinacije aktivnosti") 
+
+```
+
+
+
+# G1.: Prosimo, ocenite svojo raven doseganja posamezne kompetence. 
+## G1.10: Sposobnost prodiktivnega sodelovanja z drugimi
+
+```{r}
+zadovoljstvo_g1_10 <- readxl::read_xlsx(zadovoljstvo_vprasalniki, sheet = "G1.10.", skip = 3) %>% 
+  clean_names() %>% 
+  separate(studijski_program_institucija, 
+           into = c("sifra_sp", "studijski_program_institucija"), 
+           sep = " ", remove = F, extra = "merge") %>% 
+  mutate(studijski_program_institucija = 
+           str_to_sentence(studijski_program_institucija)) %>% 
+    mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "V mariboru", "Univerza v Mariboru")) %>%
+  mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "Fakulteta", "Filozofska fakulteta")) %>% 
+  mutate(across(x1_zelo_nizka:srednja_vrednost_mediana, ~ as.numeric(str_replace(.x, ",", "."))))
+
+```
+
+```{r}
+write.table(zadovoljstvo_g1_10, "data/zadovoljstvo_g1_10.txt", sep = "\t", dec = ",", fileEncoding = "UTF-8", row.names = F)
+zadovoljstvo_g1_10 <- read.table("data/zadovoljstvo_g1_10.txt", header = T, sep = "\t", dec = ",", fileEncoding = "UTF-8")
+
+```
+
+
+```{r}
+zadovoljstvo_g1_10_11ne <- zadovoljstvo_g1_10 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>%
+  group_by(sifra_sp, stopnja, srednja_vrednost_mediana) %>%
+  pivot_longer(x1_zelo_nizka:ne_zelim_odgovoriti, 
+               names_to = "ocena", values_to = "procent") %>% 
+  mutate(ocena = str_extract(ocena, "[\\d]"))  
+  kbl(zadovoljstvo_g1_10_11ne) %>% kable_classic(full_width = T, html_font = "Cambria")
+
+# weighted median
+library(matrixStats)
+w = rep(1, length(zadovoljstvo_g1_10_11ne$srednja_vrednost_mediana))
+wmedian = weightedMedian(zadovoljstvo_g1_10_11ne$srednja_vrednost_mediana, 
+                                         w = w, ties = "weighted")
+
+zadovoljstvo_g1_10_11ne %>%
+  ggplot(aes(ocena, procent, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = wmedian,lty=2, cex=1, color = "red") +
+  labs(title = "G1.10: Sposobnost prodiktivnega sodelovanja z drugimi.") +
+  facet_wrap(~ sifra_sp)
+
+zadovoljstvo_g1_10_11ne %>%
+  add_count(sifra_sp) %>% 
+  ggplot(aes(ocena, procent/n, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = wmedian, lty=2, cex=1, color = "red") +
+  labs(title = "G1.10: Sposobnost prodiktivnega sodelovanja z drugimi") 
+
+```
+
+
+
+# G1.: Prosimo, ocenite svojo raven doseganja posamezne kompetence. 
+## G1.11: Sposobnost vzpostavljanja lastne avtoritete
+
+```{r}
+zadovoljstvo_g1_11 <- readxl::read_xlsx(zadovoljstvo_vprasalniki, sheet = "G1.11.", skip = 3) %>% 
+  clean_names() %>% 
+  separate(studijski_program_institucija, 
+           into = c("sifra_sp", "studijski_program_institucija"), 
+           sep = " ", remove = F, extra = "merge") %>% 
+  mutate(studijski_program_institucija = 
+           str_to_sentence(studijski_program_institucija)) %>% 
+    mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "V mariboru", "Univerza v Mariboru")) %>%
+  mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "Fakulteta", "Filozofska fakulteta")) %>% 
+  mutate(across(x1_zelo_nizka:srednja_vrednost_mediana, ~ as.numeric(str_replace(.x, ",", "."))))
+
+```
+
+```{r}
+write.table(zadovoljstvo_g1_11, "data/zadovoljstvo_g1_11.txt", sep = "\t", dec = ",", fileEncoding = "UTF-8", row.names = F)
+zadovoljstvo_g1_11 <- read.table("data/zadovoljstvo_g1_11.txt", header = T, sep = "\t", dec = ",", fileEncoding = "UTF-8")
+
+```
+
+
+```{r}
+zadovoljstvo_g1_11_11ne <- zadovoljstvo_g1_11 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>%
+  group_by(sifra_sp, stopnja, srednja_vrednost_mediana) %>%
+  pivot_longer(x1_zelo_nizka:ne_zelim_odgovoriti, 
+               names_to = "ocena", values_to = "procent") %>% 
+  mutate(ocena = str_extract(ocena, "[\\d]"))  
+  kbl(zadovoljstvo_g1_11_11ne) %>% kable_classic(full_width = T, html_font = "Cambria")
+
+# weighted median
+library(matrixStats)
+w = rep(1, length(zadovoljstvo_g1_11_11ne$srednja_vrednost_mediana))
+wmedian = weightedMedian(zadovoljstvo_g1_11_11ne$srednja_vrednost_mediana, 
+                                         w = w, ties = "weighted")
+
+zadovoljstvo_g1_11_11ne %>%
+  ggplot(aes(ocena, procent, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = wmedian,lty=2, cex=1, color = "red") +
+  labs(title = "G1.11: Sposobnost vzpostavljanja lastne avtoritete.") +
+  facet_wrap(~ sifra_sp)
+
+zadovoljstvo_g1_11_11ne %>%
+  add_count(sifra_sp) %>% 
+  ggplot(aes(ocena, procent/n, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = wmedian, lty=2, cex=1, color = "red") +
+  labs(title = "G1.11: Sposobnost vzpostavljanja lastne avtoritete") 
+
+```
+
+
+
+# G1.: Prosimo, ocenite svojo raven doseganja posamezne kompetence. 
+## G1.12: Sposobnost jasnega izražanja
+
+```{r}
+zadovoljstvo_g1_12 <- readxl::read_xlsx(zadovoljstvo_vprasalniki, sheet = "G1.12.", skip = 3) %>% 
+  clean_names() %>% 
+  separate(studijski_program_institucija, 
+           into = c("sifra_sp", "studijski_program_institucija"), 
+           sep = " ", remove = F, extra = "merge") %>% 
+  mutate(studijski_program_institucija = 
+           str_to_sentence(studijski_program_institucija)) %>% 
+    mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "V mariboru", "Univerza v Mariboru")) %>%
+  mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "Fakulteta", "Filozofska fakulteta")) %>% 
+  mutate(across(x1_zelo_nizka:srednja_vrednost_mediana, ~ as.numeric(str_replace(.x, ",", "."))))
+
+```
+
+```{r}
+write.table(zadovoljstvo_g1_12, "data/zadovoljstvo_g1_12.txt", sep = "\t", dec = ",", fileEncoding = "UTF-8", row.names = F)
+zadovoljstvo_g1_12 <- read.table("data/zadovoljstvo_g1_12.txt", header = T, sep = "\t", dec = ",", fileEncoding = "UTF-8")
+
+```
+
+
+```{r}
+zadovoljstvo_g1_12_11ne <- zadovoljstvo_g1_12 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>%
+  group_by(sifra_sp, stopnja, srednja_vrednost_mediana) %>%
+  pivot_longer(x1_zelo_nizka:ne_zelim_odgovoriti, 
+               names_to = "ocena", values_to = "procent") %>% 
+  mutate(ocena = str_extract(ocena, "[\\d]"))  
+  kbl(zadovoljstvo_g1_12_11ne) %>% kable_classic(full_width = T, html_font = "Cambria")
+
+# weighted median
+library(matrixStats)
+w = rep(1, length(zadovoljstvo_g1_12_11ne$srednja_vrednost_mediana))
+wmedian = weightedMedian(zadovoljstvo_g1_12_11ne$srednja_vrednost_mediana, 
+                                         w = w, ties = "weighted")
+
+zadovoljstvo_g1_12_11ne %>%
+  ggplot(aes(ocena, procent, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = wmedian,lty=2, cex=1, color = "red") +
+  labs(title = "G1.12: Sposobnost jasnega izražanja.") +
+  facet_wrap(~ sifra_sp)
+
+zadovoljstvo_g1_12_11ne %>%
+  add_count(sifra_sp) %>% 
+  ggplot(aes(ocena, procent/n, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = wmedian, lty=2, cex=1, color = "red") +
+  labs(title = "G1.12: Sposobnost jasnega izražanja") 
+
+```
+
+
+
+# G1.: Prosimo, ocenite svojo raven doseganja posamezne kompetence. 
+## G1.13: Sposobnost dela z računalnikom in internetom
+
+```{r}
+zadovoljstvo_g1_13 <- readxl::read_xlsx(zadovoljstvo_vprasalniki, sheet = "G1.13.", skip = 3) %>% 
+  clean_names() %>% 
+  separate(studijski_program_institucija, 
+           into = c("sifra_sp", "studijski_program_institucija"), 
+           sep = " ", remove = F, extra = "merge") %>% 
+  mutate(studijski_program_institucija = 
+           str_to_sentence(studijski_program_institucija)) %>% 
+    mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "V mariboru", "Univerza v Mariboru")) %>%
+  mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "Fakulteta", "Filozofska fakulteta")) %>% 
+  mutate(across(x1_zelo_nizka:srednja_vrednost_mediana, ~ as.numeric(str_replace(.x, ",", "."))))
+
+```
+
+```{r}
+write.table(zadovoljstvo_g1_13, "data/zadovoljstvo_g1_13.txt", sep = "\t", dec = ",", fileEncoding = "UTF-8", row.names = F)
+zadovoljstvo_g1_13 <- read.table("data/zadovoljstvo_g1_13.txt", header = T, sep = "\t", dec = ",", fileEncoding = "UTF-8")
+
+```
+
+
+```{r}
+zadovoljstvo_g1_13_11ne <- zadovoljstvo_g1_13 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>%
+  group_by(sifra_sp, stopnja, srednja_vrednost_mediana) %>%
+  pivot_longer(x1_zelo_nizka:ne_zelim_odgovoriti, 
+               names_to = "ocena", values_to = "procent") %>% 
+  mutate(ocena = str_extract(ocena, "[\\d]"))  
+  kbl(zadovoljstvo_g1_13_11ne) %>% kable_classic(full_width = T, html_font = "Cambria")
+
+# weighted median
+library(matrixStats)
+w = rep(1, length(zadovoljstvo_g1_13_11ne$srednja_vrednost_mediana))
+wmedian = weightedMedian(zadovoljstvo_g1_13_11ne$srednja_vrednost_mediana, 
+                                         w = w, ties = "weighted")
+wmedian
+
+zadovoljstvo_g1_13_11ne %>%
+  ggplot(aes(ocena, procent, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = wmedian,lty=2, cex=1, color = "red") +
+  labs(title = "G1.13: Sposobnost dela z računalnikom in internetom.") +
+  facet_wrap(~ sifra_sp)
+
+zadovoljstvo_g1_13_11ne %>%
+  add_count(sifra_sp) %>% 
+  ggplot(aes(ocena, procent/n, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = wmedian, lty=2, cex=1, color = "red") +
+  labs(title = "G1.13: Sposobnost dela z računalnikom in internetom") 
+
+```
+
+
+
+# G1.: Prosimo, ocenite svojo raven doseganja posamezne kompetence. 
+## G1.14: Sposobnost pisanja poročil, zabeležk in dokumentov
+
+```{r}
+zadovoljstvo_g1_14 <- readxl::read_xlsx(zadovoljstvo_vprasalniki, sheet = "G1.14.", skip = 3) %>% 
+  clean_names() %>% 
+  separate(studijski_program_institucija, 
+           into = c("sifra_sp", "studijski_program_institucija"), 
+           sep = " ", remove = F, extra = "merge") %>% 
+  mutate(studijski_program_institucija = 
+           str_to_sentence(studijski_program_institucija)) %>% 
+    mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "V mariboru", "Univerza v Mariboru")) %>%
+  mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "Fakulteta", "Filozofska fakulteta")) %>% 
+  mutate(across(x1_zelo_nizka:srednja_vrednost_mediana, ~ as.numeric(str_replace(.x, ",", "."))))
+
+```
+
+```{r}
+write.table(zadovoljstvo_g1_14, "data/zadovoljstvo_g1_14.txt", sep = "\t", dec = ",", fileEncoding = "UTF-8", row.names = F)
+zadovoljstvo_g1_14 <- read.table("data/zadovoljstvo_g1_14.txt", header = T, sep = "\t", dec = ",", fileEncoding = "UTF-8")
+
+```
+
+
+```{r}
+zadovoljstvo_g1_14_11ne <- zadovoljstvo_g1_14 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>%
+  group_by(sifra_sp, stopnja, srednja_vrednost_mediana) %>%
+  pivot_longer(x1_zelo_nizka:ne_zelim_odgovoriti, 
+               names_to = "ocena", values_to = "procent") %>% 
+  mutate(ocena = str_extract(ocena, "[\\d]"))  
+  kbl(zadovoljstvo_g1_14_11ne) %>% kable_classic(full_width = T, html_font = "Cambria")
+
+# weighted median
+library(matrixStats)
+w = rep(1, length(zadovoljstvo_g1_14_11ne$srednja_vrednost_mediana))
+wmedian = weightedMedian(zadovoljstvo_g1_14_11ne$srednja_vrednost_mediana, 
+                                         w = w, ties = "weighted")
+wmedian
+
+zadovoljstvo_g1_14_11ne %>%
+  ggplot(aes(ocena, procent, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = wmedian,lty=2, cex=1, color = "red") +
+  labs(title = "G1.14: Sposobnost pisanja poročil, zabeležk in dokumentov.") +
+  facet_wrap(~ sifra_sp)
+
+zadovoljstvo_g1_14_11ne %>%
+  add_count(sifra_sp) %>% 
+  ggplot(aes(ocena, procent/n, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = wmedian, lty=2, cex=1, color = "red") +
+  labs(title = "G1.14: Sposobnost pisanja poročil, zabeležk in dokumentov") 
+
+```
+
+
+
+# G1.: Prosimo, ocenite svojo raven doseganja posamezne kompetence. 
+## G1.15: Sposobnost pisanja in branja v prvem tujem jeziku
+
+```{r}
+zadovoljstvo_g1_15 <- readxl::read_xlsx(zadovoljstvo_vprasalniki, sheet = "G1.15.", skip = 3) %>% 
+  clean_names() %>% 
+  separate(studijski_program_institucija, 
+           into = c("sifra_sp", "studijski_program_institucija"), 
+           sep = " ", remove = F, extra = "merge") %>% 
+  mutate(studijski_program_institucija = 
+           str_to_sentence(studijski_program_institucija)) %>% 
+    mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "V mariboru", "Univerza v Mariboru")) %>%
+  mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "Fakulteta", "Filozofska fakulteta")) %>% 
+  mutate(across(x1_zelo_nizka:srednja_vrednost_mediana, ~ as.numeric(str_replace(.x, ",", "."))))
+
+```
+
+```{r}
+write.table(zadovoljstvo_g1_15, "data/zadovoljstvo_g1_15.txt", sep = "\t", dec = ",", fileEncoding = "UTF-8", row.names = F)
+zadovoljstvo_g1_15 <- read.table("data/zadovoljstvo_g1_15.txt", header = T, sep = "\t", dec = ",", fileEncoding = "UTF-8")
+
+```
+
+
+```{r}
+zadovoljstvo_g1_15_11ne <- zadovoljstvo_g1_15 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>%
+  group_by(sifra_sp, stopnja, srednja_vrednost_mediana) %>%
+  pivot_longer(x1_zelo_nizka:ne_zelim_odgovoriti, 
+               names_to = "ocena", values_to = "procent") %>% 
+  mutate(ocena = str_extract(ocena, "[\\d]"))  
+  kbl(zadovoljstvo_g1_15_11ne) %>% kable_classic(full_width = T, html_font = "Cambria")
+
+# weighted median
+library(matrixStats)
+w = rep(1, length(zadovoljstvo_g1_15_11ne$srednja_vrednost_mediana))
+wmedian = weightedMedian(zadovoljstvo_g1_15_11ne$srednja_vrednost_mediana, 
+                                         w = w, ties = "weighted")
+
+zadovoljstvo_g1_15_11ne %>%
+  ggplot(aes(ocena, procent, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = wmedian,lty=2, cex=1, color = "red") +
+  labs(title = "G1.15: Sposobnost pisanja in branja v prvem tujem jeziku.") +
+  facet_wrap(~ sifra_sp)
+
+zadovoljstvo_g1_15_11ne %>%
+  add_count(sifra_sp) %>% 
+  ggplot(aes(ocena, procent/n, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = wmedian, lty=2, cex=1, color = "red") +
+  labs(title = "G1.15: Sposobnost pisanja in branja v prvem tujem jeziku") 
+
+```
+
+
+
+# G1.: Prosimo, ocenite svojo raven doseganja posamezne kompetence. 
+## G1.16: Sposobnost pisanja in branja v drugem tujem jeziku
+
+```{r}
+zadovoljstvo_g1_16 <- readxl::read_xlsx(zadovoljstvo_vprasalniki, sheet = "G1.16.", skip = 3) %>% 
+  clean_names() %>% 
+  separate(studijski_program_institucija, 
+           into = c("sifra_sp", "studijski_program_institucija"), 
+           sep = " ", remove = F, extra = "merge") %>% 
+  mutate(studijski_program_institucija = 
+           str_to_sentence(studijski_program_institucija)) %>% 
+    mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "V mariboru", "Univerza v Mariboru")) %>%
+  mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "Fakulteta", "Filozofska fakulteta")) %>% 
+  mutate(across(x1_zelo_nizka:srednja_vrednost_mediana, ~ as.numeric(str_replace(.x, ",", "."))))
+
+```
+
+```{r}
+write.table(zadovoljstvo_g1_16, "data/zadovoljstvo_g1_16.txt", sep = "\t", dec = ",", fileEncoding = "UTF-8", row.names = F)
+zadovoljstvo_g1_16 <- read.table("data/zadovoljstvo_g1_16.txt", header = T, sep = "\t", dec = ",", fileEncoding = "UTF-8")
+
+```
+
+
+```{r}
+zadovoljstvo_g1_16_11ne <- zadovoljstvo_g1_16 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>%
+  group_by(sifra_sp, stopnja, srednja_vrednost_mediana) %>%
+  pivot_longer(x1_zelo_nizka:ne_zelim_odgovoriti, 
+               names_to = "ocena", values_to = "procent") %>% 
+  mutate(ocena = str_extract(ocena, "[\\d]"))  
+  kbl(zadovoljstvo_g1_16_11ne) %>% kable_classic(full_width = T, html_font = "Cambria")
+
+# weighted median
+library(matrixStats)
+w = rep(1, length(zadovoljstvo_g1_16_11ne$srednja_vrednost_mediana))
+wmedian = weightedMedian(zadovoljstvo_g1_16_11ne$srednja_vrednost_mediana, 
+                                         w = w, ties = "weighted")
+
+zadovoljstvo_g1_16_11ne %>%
+  ggplot(aes(ocena, procent, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = wmedian,lty=2, cex=1, color = "red") +
+  labs(title = "G1.16: Sposobnost pisanja in branja v drugem tujem jeziku.") +
+  facet_wrap(~ sifra_sp)
+
+zadovoljstvo_g1_16_11ne %>%
+  add_count(sifra_sp) %>% 
+  ggplot(aes(ocena, procent/n, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = wmedian, lty=2, cex=1, color = "red") +
+  labs(title = "G1.16: Sposobnost pisanja in branja v drugem tujem jeziku") 
+
+```
+
+
+
+# G1.: Prosimo, ocenite svojo raven doseganja posamezne kompetence. 
+## G1.17: Sposobnost dela z ljudmi iz drugih kulturnih okolij
+
+```{r}
+zadovoljstvo_g1_17 <- readxl::read_xlsx(zadovoljstvo_vprasalniki, sheet = "G1.17.", skip = 3) %>% 
+  clean_names() %>% 
+  separate(studijski_program_institucija, 
+           into = c("sifra_sp", "studijski_program_institucija"), 
+           sep = " ", remove = F, extra = "merge") %>% 
+  mutate(studijski_program_institucija = 
+           str_to_sentence(studijski_program_institucija)) %>% 
+    mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "V mariboru", "Univerza v Mariboru")) %>%
+  mutate(studijski_program_institucija = 
+           str_replace(studijski_program_institucija, "Fakulteta", "Filozofska fakulteta")) %>% 
+  mutate(across(x1_zelo_nizka:srednja_vrednost_mediana, ~ as.numeric(str_replace(.x, ",", "."))))
+
+```
+
+```{r}
+write.table(zadovoljstvo_g1_17, "data/zadovoljstvo_g1_17.txt", sep = "\t", dec = ",", fileEncoding = "UTF-8", row.names = F)
+zadovoljstvo_g1_17 <- read.table("data/zadovoljstvo_g1_17.txt", header = T, sep = "\t", dec = ",", fileEncoding = "UTF-8")
+
+```
+
+
+```{r}
+zadovoljstvo_g1_17_11ne <- zadovoljstvo_g1_17 %>% 
+  filter(str_detect(sifra_sp, prjName)) %>%
+  group_by(sifra_sp, stopnja, srednja_vrednost_mediana) %>%
+  pivot_longer(x1_zelo_nizka:ne_zelim_odgovoriti, 
+               names_to = "ocena", values_to = "procent") %>% 
+  mutate(ocena = str_extract(ocena, "[\\d]"))  
+  kbl(zadovoljstvo_g1_17_11ne) %>% kable_classic(full_width = T, html_font = "Cambria")
+
+# weighted median
+library(matrixStats)
+w = rep(1, length(zadovoljstvo_g1_17_11ne$srednja_vrednost_mediana))
+wmedian = weightedMedian(zadovoljstvo_g1_17_11ne$srednja_vrednost_mediana, 
+                                         w = w, ties = "weighted")
+
+zadovoljstvo_g1_17_11ne %>%
+  ggplot(aes(ocena, procent, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = wmedian,lty=2, cex=1, color = "red") +
+  labs(title = "G1.17: Sposobnost dela z ljudmi iz drugih kulturnih okolij.") +
+  facet_wrap(~ sifra_sp)
+
+zadovoljstvo_g1_17_11ne %>%
+  add_count(sifra_sp) %>% 
+  ggplot(aes(ocena, procent/n, fill = ocena)) +
+  geom_col(show.legend = F) +
+  geom_vline(xintercept = wmedian, lty=2, cex=1, color = "red") +
+  labs(title = "G1.17: Sposobnost dela z ljudmi iz drugih kulturnih okolij") 
+```
+
+
+
+# H. Predlagate kakšne spremembe študijskega programa ali želite fakulteti sporočiti kaj drugega?
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+zadovoljstvo_h <- readxl::read_xlsx(zadovoljstvo_vprasalniki, sheet = "H.", skip = 3) %>% 
+  clean_names() 
+
+```
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+write.table(zadovoljstvo_h, "data/zadovoljstvo_h.txt", sep = "\t", dec = ",", fileEncoding = "UTF-8", row.names = F)
+zadovoljstvo_h <- read.table("data/zadovoljstvo_h.txt", header = T, sep = "\t", dec = ",", fileEncoding = "UTF-8")
+
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+library(tidytext)
+library(stopwords)
+library(wordcloud2)
+library(udpipe)
+
+destfile = "slovenian-ssj-ud-2.5-191206.udpipe"
+
+if(!file.exists(destfile)){
+   sprachmodell <- udpipe_download_model(language = "slovenian")
+   udmodel_sl <- udpipe_load_model(sprachmodell$file_model)
+   } else {
+  file_model = destfile
+  udmodel_sl <- udpipe_load_model(file_model)
+}
+
+x <- udpipe_annotate(udmodel_sl, 
+                     x = iconv(as.character(
+                       zadovoljstvo_h %>% 
+                         filter(str_detect(
+                           studijski_program_institucija, prjName)) %>% 
+                         select(odgovori)), 
+                               to = "UTF-8"), 
+                     trace = F)
+odgovori <- as.data.frame(x) %>% 
+  filter(upos != "PUNCT") %>% 
+  mutate(word = token)
+
+stops_sl <- as_tibble(c(stopwords("sl",source = "stopwords-iso"), 
+                        "url", "tem", "teh", "še", "ter", "ampak", "itd",
+                        "ipd", "gre", "šele", "oz", "npr", "glede",
+                        "predvsem", "vseeno", "imajo", "vpiše", "zdi", 
+                        "torej", "celim", 
+                        "takšnem", "8", "10", "21", "2", "3", "5")) %>% 
+  rename(word = value)
+
+odgovori_words <- odgovori %>% 
+  unnest_tokens(word, token, drop = F) %>% 
+  filter(word != "c")
+
+wordfreq1 <- odgovori_words %>% 
+  add_count(word, sort = T) %>% 
+  select(word, n) %>% 
+  distinct()
+
+wordcloud2(wordfreq1)  
+
+
+zadovoljstvo_h_words <- zadovoljstvo_h %>% 
+  unnest_tokens(word, odgovori) %>% 
+  anti_join(stops_sl, by = "word")
+
+wordfreq <- zadovoljstvo_h_words %>% 
+  add_count(word, sort = T) %>% 
+  distinct(word, n)
+
+wordcloud2(wordfreq)  
+  
+```
+

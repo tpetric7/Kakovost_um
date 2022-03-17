@@ -1,0 +1,26 @@
+h1 {
+  font-size: 40px;
+}
+
+h2 {
+  font-size: 30px;
+}
+
+p {
+  font-size: 16px;
+}
+
+body {
+  max-width: 1100px;
+  margin: auto;
+ padding: 1em;
+ line-height: 20px ; 
+} 
+
+table {
+  width: 100%;
+}
+
+table, th, td {
+  border: 1px solid black;
+}

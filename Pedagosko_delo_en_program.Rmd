@@ -1,0 +1,1495 @@
+---
+title: "Pedagoško delo"
+author: "Teodor Petrič"
+date: "`r format(Sys.time(), '%Y-%m-%d')`"
+output:
+  html_document:
+    toc: yes
+    toc_float: yes
+    css: test.css
+    highlight: espresso
+    theme: paper
+    fig_caption: yes
+  pdf_document:
+    toc: yes
+  word_document:
+    toc: yes
+    highlight: tango
+    fig_caption: yes
+always_allow_html: yes
+params:
+  sifra_sp:
+    label: 'Študijska smer:'
+    value: PSIE
+    input: select
+    choices:
+    - Univerza
+    - FILOZOFSKA
+    - 11AN
+    - 11GE
+    - 11PE
+    - 11FL
+    - 11ZG
+    - 11UZ
+    - ZGOE
+    - SOCE
+    - SLOE
+    - PSIE
+    - GERE
+    - 11SL
+    - 11SC
+    - 11NE
+    - 11MN
+    - 11MA
+    - 22YA
+    - 22YB
+    - 22YC
+    - 22YD
+    - 22YE
+    - 22YF
+    - 22YH
+    - 22YI
+    - 22YJ
+    - 22YK
+    - 22YL
+    - 22YM
+    - 22YO
+    - 22YR
+    - XPXA
+    - XNXB
+    - XNXC
+    - XNXE
+    - XNXF
+    - XNXH
+    - XNXJ
+---
+
+Version 1 (2021-02-16)
+
+Version 2 (2021-12-29)
+with [DT](https://rstudio.github.io/DT/) and
+[DT extensions](https://rstudio.github.io/DT/extensions.html)
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(tidyverse)
+library(scales)
+library(readxl)
+library(janitor)
+library(kableExtra)
+
+theme_set(theme_light())
+
+```
+
+Excelov zvezek:
+"RezultatiAnketeOPedagoskemDelu2020-2021.xlsx"
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# pedelo <- "data/Rezultati študentske ankete za študijsko leto 2019-2020.xlsx"
+pedelo <- "data/RezultatiAnketeOPedagoskemDelu2020-2021.xlsx"
+```
+
+Šifra študijskega programa (*yaml* header):
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+readname = function()# Get the project name
+{
+  params$sifra_sp
+}
+prjName=readname()
+prjName
+```
+
+Izvajalci študijskih predmetov:
+
+(XNXJ: šifre predmetov PAPN, PATA, PNTN !)
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# izvajalci_germ <- c("Jesenšek Vida", "Jazbec Saša", "Kacjan Brigita", "Kondrič-Horvat Vesna", "Birk Matjaž", "Kos Dejan", "Lipavic Oštir Alja", "Fabčič Melanija Larisa", "Petrič Teodor", "Mlakar Gračner Doris", "Enčeva Milka", "Žavski Bahč Mateja", "Leskovich Anna Theresa", "Bentz Maria Berta", "Bauman Nataša")
+# izvajalci_germ <- c("Jesenšek Vida", "Jazbec Saša", "Kacjan Brigita", "Kondrič Horvat Vesna", "Birk Matjaž", "Kos Dejan", "Lipavic Oštir Alja", "Fabčič Melanija Larisa", "Petrič Teodor", "Mlakar Gračner Doris", "Enčeva Milka", "Žavski Bahč Mateja", "Leskovich Anna Theresa", "Bauman Nataša")
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+delovni_list0 <- "Povprečja izvajalcev (ŠP-UE)"
+
+ucne_enote_clean <- read_xlsx(pedelo, 
+                                  sheet = delovni_list0, 
+                              skip = 0) %>% # Povprečja po učnih enotah
+  clean_names() %>%
+  mutate(priimek_in_ime = str_to_title(priimek_in_ime)) %>% 
+  # separate(ucna_enota, into = c("sifra_ue", "naziv_ue"), sep = " ", extra = "merge") %>% 
+  separate(studijski_program, into = c("sifra_sp", "naziv_sp", sep = " ", extra = "merge")) %>% 
+  mutate(naziv_sp = str_to_sentence(naziv_sp)) %>% 
+  mutate(povprecna_ocena = as.numeric(povprecna_ocena),
+         standardni_odklon = as.numeric(standardni_odklon))
+
+if(
+  prjName != "XNXJ"
+){
+izvajalci_germ <- ucne_enote_clean %>% 
+  filter(fakulteta == "FF") %>% 
+  filter(sifra_sp == prjName) %>% 
+  select(priimek_in_ime) %>% 
+  distinct() %>% 
+  pull() # %>% 
+  # paste(collapse = ", ")
+  
+}else{
+izvajalci_germ <- ucne_enote_clean %>% 
+  filter(fakulteta == "FF") %>% 
+  filter(sifra_sp %in% c("PNTN","PATN", "PATA")) %>% 
+  select(priimek_in_ime) %>% 
+  distinct() %>% 
+  pull() # %>% 
+  # paste(collapse = ", ")
+}
+
+izvajalci_germ
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# stevilo_predmetov <- case_when(
+#   prjName == "11NE" ~ 38,
+#   prjName == "GERE" ~ 65,
+#   TRUE ~ 0)
+
+if(
+  prjName != "XNXJ"
+){
+stevilo_predmetov <- ucne_enote_clean %>% 
+  filter(fakulteta == "FF") %>% 
+  filter(sifra_sp == prjName) %>% 
+  count() %>% pull()
+}else{
+stevilo_predmetov <- ucne_enote_clean %>% 
+  filter(fakulteta == "FF") %>% 
+  filter(sifra_sp %in% c("PNTN","PATN", "PATA")) %>% 
+  count() %>% pull()
+}
+
+stevilo_predmetov
+```
+Število predmetov: `r stevilo_predmetov`.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# sifra_predmetov <- case_when(
+#   prjName == "11NE" ~ "NE",
+#   prjName == "GERE" ~ "EG",
+#   prjName == "22YD" ~ "YD",
+#   prjName == "22YK" ~ "YK",
+#   prjName == "XNXH" ~ "XH",
+#   TRUE ~ "other")
+
+if(
+  prjName != "XNXJ"
+){
+sifra_predmetov <- ucne_enote_clean %>% 
+  filter(fakulteta == "FF") %>% 
+  filter(sifra_sp == prjName) %>% 
+  mutate(oznaka_predmetov = str_sub(sifra_sp, -2)) %>% # extract last 2
+  select(oznaka_predmetov) %>% 
+  distinct() %>% pull()
+}else{
+sifra_predmetov <- ucne_enote_clean %>% 
+  filter(fakulteta == "FF") %>% 
+  filter(sifra_sp %in% c("PNTN","PATN", "PATA")) %>% 
+  mutate(oznaka_predmetov = str_sub(sifra_sp, -2)) %>% # extract last 2
+  select(oznaka_predmetov) %>% 
+  distinct() %>% pull()
+}
+
+```
+
+Šifra predmetov: `r sifra_predmetov`.
+
+
+# SEP Točka 12
+
+# Povprečne ocene izvajalcev
+
+Delovni list: "Povprečne ocene izvajalcev" (na osnovi števila respondentov)
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, out.width="100%"}
+delovni_list1 <- "Povprečne ocene izvajalcev"
+# pedagoski_izvajalci_clean <- read_xlsx("data/KopijaRezultatiAnketeOPedagoskemDelu2018-2019.xlsx", 
+#                                   sheet = "Povprečne ocene izvajalcev", skip = 6) %>% 
+pedagoski_izvajalci_clean <- 
+  read_xlsx(pedelo, sheet = delovni_list1, skip = 6) %>% 
+  clean_names() %>%
+  mutate(priimek_in_ime = str_to_title(priimek_in_ime)) %>% 
+  separate(fakultete, into = c("fakulteta1", "fakulteta2", "fakulteta3"), 
+           sep = ",", extra = "merge", fill = "right") %>% 
+  mutate(povprecna_ocena = as.numeric(povprecna_ocena),
+         ocena_r_p = as.numeric(ocena_r_p),
+         prehodnost_percent = as.numeric(prehodnost_percent))
+
+library(DT)
+pedagoski_izvajalci_clean %>% 
+  # kbl() %>% kable_classic(full_width = T, html_font = "Cambria") %>% 
+# DT::datatable(fillContainer = TRUE, filter = "top",
+#               options = list(pageLength = 10))
+DT::datatable(filter = "top", fillContainer = T,
+              extensions = c('Buttons', "ColReorder", "RowReorder",
+                             'FixedColumns', "KeyTable", "Scroller"),
+              options = list(pageLength = 10, 
+                             autowidth = TRUE,
+                             colReorder = TRUE, 
+                             rowReorder = TRUE, order = list(c(0, 'asc')),
+                             keys = TRUE,
+                             deferRender = TRUE,
+                             scrollY = 500, scroller = TRUE,
+                             scrollX = TRUE,
+                             fixedColumns = 
+                               list(leftColumns = 2, rightColumns = 1),
+                             dom = 'Bfrtip', # Bfrtip or t
+    buttons = c('colvis','copy', 'csv', 'excel', 'pdf', 'print')
+  )) %>%
+  formatStyle("priimek_in_ime",
+  target = 'row',
+  backgroundColor = styleEqual(c(0, 1), c('gray30', 'lightblue')))
+
+```
+
+```{r eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+# pedagoski_izvajalci_clean %>% 
+#   mutate(priimek_in_ime = str_squish(priimek_in_ime)) %>% 
+#   filter(str_detect(priimek_in_ime, "Jesenš|Jazbec|avski|Enč"))
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+pedagoski_izvajalci_germanistike <- pedagoski_izvajalci_clean %>% 
+  rename(izvajalec = priimek_in_ime) %>% 
+  filter(izvajalec %in% izvajalci_germ)
+
+pedagoski_izvajalci_germanistike %>% 
+  select(izvajalec, povprecna_ocena, standardni_odklon, st_veljavnih_odgovorov) %>% 
+  group_by(izvajalec) %>% 
+  arrange(-povprecna_ocena) %>% 
+  kbl() %>% kable_classic(full_width = T, html_font = "Cambria") %>% add_footnote(prjName)
+
+pedagoski_izvajalci_germanistike %>% 
+  summarise(avg_ocena = mean(povprecna_ocena)) %>% 
+  kbl() %>% kable_classic(full_width = T, html_font = "Cambria") %>% add_footnote(prjName)
+
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+pedagoski_izvajalci_germanistike %>% 
+  select(izvajalec, povprecna_ocena, standardni_odklon, 
+         st_veljavnih_odgovorov) %>% 
+  mutate(izvajalec = fct_reorder(izvajalec, povprecna_ocena)) %>%
+  ggplot(aes(povprecna_ocena, izvajalec, fill = izvajalec)) +
+  geom_col(show.legend = F) +
+  geom_point(size = 2, show.legend = F) + 
+  geom_errorbarh(aes(xmin = povprecna_ocena - standardni_odklon, 
+                     xmax = povprecna_ocena + standardni_odklon))
+
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+pedagoski_izvajalci_clean %>% 
+  select(priimek_in_ime, fakulteta1, povprecna_ocena, standardni_odklon, st_veljavnih_odgovorov) %>% 
+  filter(fakulteta1 == "FF") %>% 
+  group_by(priimek_in_ime) %>% 
+  arrange(-povprecna_ocena) %>% 
+  # kbl() %>% kable_classic(full_width = T, html_font = "Cambria")
+  DT::datatable(filter = "top", fillContainer = T,
+              extensions = c('Buttons', "ColReorder", "RowReorder",
+                             'FixedColumns', "KeyTable", "Scroller"),
+              options = list(pageLength = 10, 
+                             autowidth = TRUE,
+                             colReorder = TRUE, 
+                             rowReorder = TRUE, order = list(c(0, 'asc')),
+                             keys = TRUE,
+                             deferRender = TRUE,
+                             scrollY = 500, scroller = TRUE,
+                             scrollX = TRUE,
+                             fixedColumns = 
+                               list(leftColumns = 2, rightColumns = 1),
+                             dom = 'Bfrtip', # Bfrtip or t
+    buttons = c('colvis','copy', 'csv', 'excel', 'pdf', 'print')
+  )) %>%
+  formatStyle("priimek_in_ime",
+  target = 'row',
+  backgroundColor = styleEqual(c(0, 1), c('gray30', 'lightblue')))
+
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+pedagoski_izvajalci_clean %>% 
+  group_by(fakulteta1) %>% 
+  summarise(avg_ocena = mean(povprecna_ocena, na.rm = T),
+            sd_ocena = sd(povprecna_ocena, na.rm = T)) %>% 
+  arrange(-avg_ocena) %>% 
+  mutate(fakulteta1 = fct_reorder(fakulteta1, avg_ocena)) %>%
+  ggplot(aes(avg_ocena, fakulteta1, fill = fakulteta1)) +
+  geom_col(show.legend = F) +
+  geom_point(size = 2, show.legend = F) + 
+  geom_errorbarh(aes(xmin = avg_ocena - sd_ocena, xmax = avg_ocena + sd_ocena))
+
+```
+
+# Povprečja po učnih enotah
+
+Delovni list: Povprečja izvajalcev (ŠP-UE)
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+delovni_list0 <- "Povprečja izvajalcev (ŠP-UE)"
+
+# ucne_enote_clean <- read_xlsx("data/KopijaRezultatiAnketeOPedagoskemDelu2018-2019.xlsx", 
+#                                   sheet = "Povprečja po učnih enotah", skip = 3) %>% 
+ucne_enote_clean <- read_xlsx(pedelo, 
+                                  sheet = delovni_list0, 
+                              skip = 0) %>% # Povprečja po učnih enotah
+  clean_names() %>%
+  mutate(priimek_in_ime = str_to_title(priimek_in_ime)) %>% 
+  # separate(ucna_enota, into = c("sifra_ue", "naziv_ue"), sep = " ", extra = "merge") %>% 
+  separate(studijski_program, into = c("sifra_sp", "naziv_sp", sep = " ", extra = "merge")) %>% 
+  mutate(naziv_sp = str_to_sentence(naziv_sp)) %>% 
+  mutate(povprecna_ocena = as.numeric(povprecna_ocena),
+         standardni_odklon = as.numeric(standardni_odklon))
+
+ucne_enote_clean %>% 
+# kbl() %>% kable_classic(full_width = T, html_font = "Cambria") %>% 
+  DT::datatable(filter = "top", fillContainer = T,
+              extensions = c('Buttons', "ColReorder", "RowReorder",
+                             'FixedColumns', "KeyTable", "Scroller"),
+              options = list(pageLength = 10, 
+                             autowidth = TRUE,
+                             colReorder = TRUE, 
+                             rowReorder = TRUE, order = list(c(0, 'asc')),
+                             keys = TRUE,
+                             deferRender = TRUE,
+                             scrollY = 500, scroller = TRUE,
+                             scrollX = TRUE,
+                             fixedColumns = 
+                               list(leftColumns = 2, rightColumns = 1),
+                             dom = 'Bfrtip', # Bfrtip or t
+    buttons = c('colvis','copy', 'csv', 'excel', 'pdf', 'print')
+  )) %>%
+  formatStyle("priimek_in_ime",
+  target = 'row',
+  backgroundColor = styleEqual(c(0, 1), c('gray30', 'lightblue')))
+
+
+```
+
+# Povprečna ocena po študijskih programih
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ucne_enote_clean %>% 
+  filter(fakulteta == "FF" & (sifra_sp == prjName)) %>% 
+  group_by(sifra_sp) %>% 
+  summarise(avg_ocena = mean(povprecna_ocena, na.rm = T), 
+            sd_ocena = mean(standardni_odklon, na.rm = T)) %>% 
+  arrange(-avg_ocena) %>% 
+  kbl() %>% kable_classic(full_width = T, html_font = "Cambria") %>% add_footnote(prjName)
+
+ucne_enote_clean %>% 
+  filter(fakulteta == "FF") %>% 
+  group_by(fakulteta) %>% 
+  summarise(avg_ocena = mean(povprecna_ocena, na.rm = T), 
+            sd_ocena = mean(standardni_odklon, na.rm = T)) %>% 
+  arrange(-avg_ocena) %>% 
+  kbl() %>% kable_classic(full_width = T, html_font = "Cambria") %>% add_footnote("FF")
+
+```
+
+t-test: razlika med povprečno oceno vseh učnih enot `r prjName` in učnih enot Filozofske fakultete (na 1. in 2. stopnji, ampak brez `r prjName`) je statistično značilna, ČE je p-vrednost manjša od 0,05.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ne11 <- ucne_enote_clean %>% 
+  filter(fakulteta == "FF" & (sifra_sp == prjName)) %>% 
+  # group_by(sifra_ue) %>% 
+  group_by(sifra_ucne_enote) %>% 
+  summarise(avg_ocena = mean(povprecna_ocena, na.rm = T), 
+            sd_ocena = mean(standardni_odklon, na.rm = T))
+an11 <- ucne_enote_clean %>% 
+  # filter(fakulteta == "FF") %>% 
+  filter(sifra_sp != prjName) %>%
+  # filter(!str_detect(sifra_ucne_enote, "^X|Y|22")) %>%
+  # group_by(sifra_ue) %>% 
+  group_by(sifra_ucne_enote) %>% 
+  summarise(avg_ocena = mean(povprecna_ocena, na.rm = T), 
+            sd_ocena = mean(standardni_odklon, na.rm = T))
+
+ff_povpr_oc <- ucne_enote_clean %>% 
+  filter(fakulteta == "FF") %>% 
+  filter(sifra_sp != prjName) %>%
+  group_by(fakulteta) # %>% 
+  # summarise(avg_ocena = mean(povprecna_ocena, na.rm = T), 
+  #           sd_ocena = mean(standardni_odklon, na.rm = T)) %>% 
+  # arrange(-avg_ocena)
+
+# t.test(ne11$avg_ocena,an11$avg_ocena)
+# t.test(ne11$avg_ocena,ff_povpr_oc$povprecna_ocena)
+
+```
+
+
+Povprečne ocene UE izbranega študijskega programa  
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+if(
+  prjName != "XNXJ"
+){
+ue_select <- ucne_enote_clean %>% 
+  filter(fakulteta == "FF" & (sifra_sp == prjName))  
+}else{
+ue_select <- ucne_enote_clean %>% 
+  filter(fakulteta == "FF" & (sifra_sp %in% c("PNTN","PATN", "PATA")))
+}
+
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ue_select %>% 
+  # group_by(naziv_ue) %>%
+  group_by(sifra_ucne_enote, ucna_enota) %>%
+  summarise(avg_ocena = mean(povprecna_ocena), sd_ocena = mean(standardni_odklon)) %>% 
+  arrange(-avg_ocena) %>% 
+  # kbl() %>% kable_classic(full_width = T, html_font = "Cambria") %>% add_footnote(prjName)
+  DT::datatable(filter = "top", fillContainer = T,
+              extensions = c('Buttons', "ColReorder", "RowReorder",
+                             'FixedColumns', "KeyTable", "Scroller"),
+              options = list(pageLength = 10, 
+                             autowidth = TRUE,
+                             colReorder = TRUE, 
+                             rowReorder = TRUE, order = list(c(0, 'asc')),
+                             keys = TRUE,
+                             deferRender = TRUE,
+                             scrollY = 500, scroller = TRUE,
+                             scrollX = TRUE,
+                             fixedColumns = 
+                               list(leftColumns = 2, rightColumns = 1),
+                             dom = 'Bfrtip', # Bfrtip or t
+    buttons = c('colvis','copy', 'csv', 'excel', 'pdf', 'print')
+  )) %>%
+  formatStyle("sifra_ucne_enote",
+  target = 'row',
+  backgroundColor = styleEqual(c(0, 1), c('gray30', 'lightblue')))
+
+ue_select %>% 
+  # group_by(naziv_ue) %>% 
+  group_by(sifra_ucne_enote) %>%
+  summarise(avg_ocena = mean(povprecna_ocena), 
+            sd_ocena = mean(standardni_odklon)) %>% 
+  arrange(-avg_ocena) %>% 
+  head(20) %>%
+  # mutate(naziv_ue = fct_reorder(naziv_ue, avg_ocena)) %>%
+  # ggplot(aes(avg_ocena, naziv_ue, fill = naziv_ue)) +
+  mutate(sifra_ucne_enote = fct_reorder(sifra_ucne_enote, avg_ocena)) %>%
+  ggplot(aes(avg_ocena, sifra_ucne_enote, fill = sifra_ucne_enote)) +
+  geom_col(show.legend = F) +
+  geom_point(size = 2, show.legend = F) + 
+  geom_errorbarh(aes(xmin = avg_ocena - sd_ocena, 
+                     xmax = avg_ocena + sd_ocena))
+
+```
+
+Ocene oddelčnih izvajalcev, izračunane iz povprečij učnih enot (zgoraj izračun na osnovi števila respondentov).
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, out.width="100%", out.height="100%"}
+ue_select %>% 
+# ucne_enote_clean %>% 
+#   filter(fakulteta == "FF" & (sifra_sp == prjName)) %>% 
+  # group_by(priimek_in_ime, sifra_ue) %>% 
+  group_by(priimek_in_ime, sifra_ucne_enote, ucna_enota) %>% 
+  summarise(avg_ocena = mean(povprecna_ocena, na.rm = T),
+            sd_ocena = sd(povprecna_ocena, na.rm = T)) %>% 
+  arrange(-avg_ocena) %>% 
+  # kbl() %>% kable_classic(full_width = T, html_font = "Cambria") %>% 
+  # add_footnote(prjName)
+  DT::datatable(filter = "top", fillContainer = T,
+              extensions = c('Buttons', "ColReorder", "RowReorder",
+                             'FixedColumns', "KeyTable", "Scroller"),
+              options = list(pageLength = 10, 
+                             autowidth = TRUE,
+                             colReorder = TRUE, 
+                             rowReorder = TRUE, order = list(c(0, 'asc')),
+                             keys = TRUE,
+                             deferRender = TRUE,
+                             scrollY = 500, scroller = TRUE,
+                             scrollX = TRUE,
+                             fixedColumns = 
+                               list(leftColumns = 2, rightColumns = 1),
+                             dom = 'Bfrtip', # Bfrtip or t
+    buttons = c('colvis','copy', 'csv', 'excel', 'pdf', 'print')
+  )) %>%
+  formatStyle("sifra_ucne_enote",
+  target = 'row',
+  backgroundColor = styleEqual(c(0, 1), c('gray30', 'lightblue')))
+
+ue_clean <- ue_select %>% 
+  # ucne_enote_clean %>% 
+  # filter(fakulteta == "FF" & (sifra_sp == prjName)) %>% 
+  group_by(sifra_ucne_enote, priimek_in_ime) %>% 
+  summarise(avg_ocena = mean(povprecna_ocena, na.rm = T),
+            sd_ocena = sd(povprecna_ocena, na.rm = T)) %>% 
+  arrange(-avg_ocena) %>%
+  mutate(sifra_ucne_enote = fct_reorder(sifra_ucne_enote, avg_ocena))
+
+p_ue <- ue_clean %>% 
+  ggplot(aes(avg_ocena, sifra_ucne_enote, fill = sifra_ucne_enote)) +
+  geom_col(show.legend = F) +
+  geom_point(size = 2, show.legend = F) + 
+  geom_errorbarh(aes(xmin = avg_ocena - sd_ocena, 
+                     xmax = avg_ocena + sd_ocena)) 
+
+if (nrow(ue_clean) > 1){
+p_ue +
+  facet_wrap(~ priimek_in_ime, scales = "free_y")
+} else {
+    print("Za prikaz ocen posameznih predmetov ni dovolj enot")
+  }
+```
+
+# Pogostost obiskovanja predavanj, seminarjev in vaj
+
+točko 12:
+- pogostost obiskovanja predavanj, seminarjev in vaj
+- stopnja sodelovanja visokošolskih učitelj s študenti 
+- točnost, dostopnost in odzivnost učiteljev pri posameznih UE 
+- objektivnost, pravičnost in jasna merila ocenjevanja
+- kako študenti ocenjujejo učne izide in pridobljene kompetence 
+...
+
+Delovni list: Frekvence odgovorov (UE)
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+delovni_list2 = "Frekvence odgovorov (UE)"
+
+frekvence_odgovorov_ff_wide <- 
+  read_xlsx(pedelo, sheet = delovni_list2, skip = 3) %>% 
+  clean_names() %>%
+  rename(fakulteta = x1, sifra_ue = x2, ucna_enota = x3, izvajalec = x4, stevilo_respondentov = x5) %>%
+  mutate(izvajalec = str_to_title(izvajalec)) %>% 
+  # select(-(x2_zelo_slabo_35:ne_morem_zelim_oceniti_40)) %>% # splošna ocena ped. dela NE !!!
+  filter(fakulteta == "FF")
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+pogostost_obiskov_ff <- frekvence_odgovorov_ff_wide %>% 
+  select(fakulteta:stevilo_respondentov, zelo_redko_do_20_percent:ne_morem_zelim_oceniti_10) %>% 
+  gather(key = "ocena", value = "procenti", -fakulteta, -sifra_ue, -ucna_enota, -izvajalec, -stevilo_respondentov)
+
+```
+
+
+<!-- str_detect: "NE", "EG", "22YD", "22YK", "XNXH, ... -->
+<!-- število predmetov: procenti/38 (NE), procenti/65 (EG) -->
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+if(
+  prjName != "XNXJ" & prjName != "GERE" & prjName != "PSIE" & prjName != "SLOE" & prjName != "SOCE" & prjName != "ZGOE"
+){
+sifra_predmetov <- ucne_enote_clean %>% 
+  filter(fakulteta == "FF") %>% 
+  filter(sifra_sp == prjName) %>% 
+  mutate(oznaka_predmetov = str_sub(sifra_sp, -2)) %>% # extract last 2
+  select(oznaka_predmetov) %>% 
+  distinct() %>% pull()
+}else if (
+  prjName == "GERE"
+  ){
+  sifra_predmetov <- "EG"
+}else if (
+  prjName == "PSIE"
+  ){
+  sifra_predmetov <- "EP"
+}else if (
+  prjName == "SLOE"
+  ){
+  sifra_predmetov <- "ES"
+}else if (
+  prjName == "SOCE"
+  ){
+  sifra_predmetov <- "EI"
+}else if (
+  prjName == "ZGOE"
+  ){
+  sifra_predmetov <- "EZ"
+}else{
+  sifra_predmetov <- str_sub(prjName, -2)
+# sifra_predmetov <- ucne_enote_clean %>% 
+#   filter(fakulteta == "FF") %>% 
+#   filter(sifra_sp %in% c("PNTN","PATN", "PATA")) %>% 
+#   mutate(oznaka_predmetov = str_sub(sifra_sp, -2)) %>% # extract last 2
+#   select(oznaka_predmetov) %>% 
+#   distinct() %>% pull()
+}
+
+```
+
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+pogostost_obiskov_germ <- pogostost_obiskov_ff %>% 
+  filter(izvajalec %in% izvajalci_germ)
+
+# levels = unique(pogostost_obiskov_ff$ocena)
+levels = c("ne_morem_zelim_oceniti_10", "zelo_redko_do_20_percent",
+           "obcasno_20_50_percent", 
+           "pogosto_50_80_percent", "redno_nad_80_percent")
+  # mutate(ocena = fct_relevel(ocena, levels)) %>% 
+
+pogostost_obiskov_ff %>% 
+  filter(str_detect(sifra_ue, sifra_predmetov)) %>% 
+  filter(ocena == "redno_nad_80_percent") %>% 
+  select(-fakulteta) %>% 
+  # kbl() %>% kable_classic(full_width = T, html_font = "Cambria") %>% add_footnote(prjName)
+DT::datatable(filter = "top", fillContainer = T,
+              extensions = c('Buttons', "ColReorder", "RowReorder",
+                             'FixedColumns', "KeyTable", "Scroller"),
+              options = list(pageLength = 10, 
+                             autowidth = TRUE,
+                             colReorder = TRUE, 
+                             rowReorder = TRUE, order = list(c(0, 'asc')),
+                             keys = TRUE,
+                             deferRender = TRUE,
+                             scrollY = 600, scroller = TRUE,
+                             scrollX = TRUE,
+                             fixedColumns = 
+                               list(leftColumns = 2, rightColumns = 1),
+                             dom = 'Bfrtip', # Bfrtip or t
+    buttons = c('colvis','copy', 'csv', 'excel', 'pdf', 'print')
+  )) %>%
+  formatStyle("izvajalec",
+  target = 'row',
+  backgroundColor = styleEqual(c(0, 1), c('gray30', 'lightblue')))
+
+pogostost_obiskov_ff %>% 
+  filter(str_detect(sifra_ue, sifra_predmetov)) %>% 
+  filter(ocena == "redno_nad_80_percent") %>% 
+  summarise(povprecje_redno_nad_80 = mean(procenti)) %>% 
+  kbl() %>% kable_classic(full_width = T, html_font = "Cambria") %>% add_footnote(prjName)
+
+# pogostost_obiskov_ff %>% 
+#   filter(str_detect(sifra_ue, sifra_predmetov)) %>% 
+#   mutate(ocena = fct_relevel(ocena, levels)) %>% 
+#   mutate(udelezba = procenti/stevilo_predmetov) %>% 
+#   ggplot(aes(udelezba, ocena, fill = udelezba)) +
+#   geom_col(show.legend = F) +
+#   scale_x_continuous(breaks = c(0,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,100))
+
+frekv_ff_obisk <- pogostost_obiskov_ff %>% 
+  filter(str_detect(sifra_ue, sifra_predmetov)) %>% 
+  drop_na()
+p_obisk <- frekv_ff_obisk %>% 
+  add_count(sifra_ue, izvajalec) %>% 
+  mutate(stevilo_predmetov_2 = nrow(frekv_ff_obisk)/n) %>% 
+  group_by(sifra_ue) %>% 
+  mutate(ocena = fct_relevel(ocena, levels)) %>% 
+  mutate(udelezba = procenti/stevilo_predmetov_2) %>% 
+  ggplot(aes(udelezba, ocena, fill = udelezba)) +
+  geom_col(show.legend = F) 
+p_obisk +
+  scale_x_continuous(breaks = seq(0, 100, 10))
+
+if (nrow(frekv_ff_obisk) > 1){
+p_obisk +
+  # geom_text(aes(label = round(obremenitev), 1)) +
+  facet_wrap(~ sifra_ue)
+} else {
+    print("Za prikaz ocen posameznih predmetov ni dovolj enot")
+  }
+```
+
+
+# Sodelovanje s študenti
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+sodelovanje_s_studenti_ff <- frekvence_odgovorov_ff_wide %>% 
+  select(fakulteta:stevilo_respondentov, x2_zelo_slabo_17:ne_morem_zelim_oceniti_22) %>% 
+  gather(key = "ocena", value = "procenti", 
+         -fakulteta, -sifra_ue, -ucna_enota, -izvajalec, -stevilo_respondentov)
+
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+sodelovanje_s_studenti_germ <- sodelovanje_s_studenti_ff %>% 
+  filter(izvajalec %in% izvajalci_germ)
+
+# levels = unique(pogostost_obiskov_ff$ocena)
+levels = c("ne_morem_zelim_oceniti_22", "x2_zelo_slabo_17", "x1_slabo_18", 
+           "x0_povprecno_19", "x1_dobro_20", "x2_zelo_dobro_21")
+  # mutate(ocena = fct_relevel(ocena, levels)) %>% 
+
+sodelovanje_s_studenti_ff %>% 
+  filter(str_detect(sifra_ue, sifra_predmetov)) %>% 
+  filter(ocena == "x2_zelo_dobro_21") %>% 
+  select(-fakulteta) %>% 
+  # kbl() %>% kable_classic(full_width = T, html_font = "Cambria") %>% add_footnote(prjName)
+DT::datatable(filter = "top", fillContainer = T,
+              extensions = c('Buttons', "ColReorder", "RowReorder",
+                             'FixedColumns', "KeyTable", "Scroller"),
+              options = list(pageLength = 10, 
+                             autowidth = TRUE,
+                             colReorder = TRUE, 
+                             rowReorder = TRUE, order = list(c(0, 'asc')),
+                             keys = TRUE,
+                             deferRender = TRUE,
+                             scrollY = 600, scroller = TRUE,
+                             scrollX = TRUE,
+                             fixedColumns = 
+                               list(leftColumns = 2, rightColumns = 1),
+                             dom = 'Bfrtip', # Bfrtip or t
+    buttons = c('colvis','copy', 'csv', 'excel', 'pdf', 'print')
+  )) %>%
+  formatStyle("izvajalec",
+  target = 'row',
+  backgroundColor = styleEqual(c(0, 1), c('gray30', 'lightblue')))
+
+sodelovanje_s_studenti_ff %>% 
+  filter(str_detect(sifra_ue, sifra_predmetov)) %>% 
+  filter(ocena == "x2_zelo_dobro_21") %>% 
+  summarise(povprecje_zelo_dobro_sodelovanje = mean(procenti, na.rm = T)) %>% 
+  kbl() %>% kable_classic(full_width = T, html_font = "Cambria") %>% add_footnote(prjName)
+
+# sodelovanje_s_studenti_ff %>% 
+#   filter(str_detect(sifra_ue, sifra_predmetov)) %>% 
+#   mutate(ocena = fct_relevel(ocena, levels)) %>% 
+#   mutate(sodelovanje = procenti/stevilo_predmetov) %>% 
+#   ggplot(aes(sodelovanje, ocena, fill = sodelovanje)) +
+#   geom_col(show.legend = F) +
+#   scale_x_continuous(breaks = c(0,5,10,15,20,25,30,35,40,45,50,55))
+
+frekv_ff_sod <- sodelovanje_s_studenti_ff %>% 
+  filter(str_detect(sifra_ue, sifra_predmetov)) %>% 
+  drop_na()
+p_sod <- frekv_ff_sod %>% 
+  add_count(sifra_ue, izvajalec) %>% 
+  mutate(stevilo_predmetov_2 = nrow(frekv_ff_sod)/n) %>% 
+  group_by(sifra_ue) %>% 
+  mutate(ocena = fct_relevel(ocena, levels)) %>% 
+  mutate(sodelovanje = procenti/stevilo_predmetov_2) %>% 
+  ggplot(aes(sodelovanje, ocena, fill = sodelovanje)) +
+  geom_col(show.legend = F) 
+p_sod +
+  scale_x_continuous(breaks = seq(0, 100, 10))
+
+if (nrow(frekv_ff_sod) > 1){
+p_sod +
+  # geom_text(aes(label = round(obremenitev), 1)) +
+  facet_wrap(~ sifra_ue)
+} else {
+    print("Za prikaz ocen posameznih predmetov ni dovolj enot")
+  }
+
+```
+
+# Točnost, dostopnost in odzivnost učiteljev pri posameznih UE 
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+tocnost_ff <- frekvence_odgovorov_ff_wide %>% 
+  select(fakulteta:stevilo_respondentov, x2_zelo_slabo_23:ne_morem_zelim_oceniti_28) %>% 
+  gather(key = "ocena", value = "procenti", 
+         -fakulteta, -sifra_ue, -ucna_enota, -izvajalec, -stevilo_respondentov)
+
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+tocnost_germ <- tocnost_ff %>% 
+  filter(izvajalec %in% izvajalci_germ)
+
+# levels = unique(pogostost_obiskov_ff$ocena)
+levels = c("ne_morem_zelim_oceniti_28", "x2_zelo_slabo_23", "x1_slabo_24", 
+           "x0_povprecno_25", "x1_dobro_26", "x2_zelo_dobro_27")
+  # mutate(ocena = fct_relevel(ocena, levels)) %>% 
+
+
+tocnost_ff %>% 
+  filter(str_detect(sifra_ue, sifra_predmetov)) %>% 
+  filter(ocena == "x2_zelo_dobro_27") %>% 
+  select(-fakulteta) %>% 
+  # kbl() %>% kable_classic(full_width = T, html_font = "Cambria") %>% add_footnote(prjName)
+DT::datatable(filter = "top", fillContainer = T,
+              extensions = c('Buttons', "ColReorder", "RowReorder",
+                             'FixedColumns', "KeyTable", "Scroller"),
+              options = list(pageLength = 10, 
+                             autowidth = TRUE,
+                             colReorder = TRUE, 
+                             rowReorder = TRUE, order = list(c(0, 'asc')),
+                             keys = TRUE,
+                             deferRender = TRUE,
+                             scrollY = 600, scroller = TRUE,
+                             scrollX = TRUE,
+                             fixedColumns = 
+                               list(leftColumns = 2, rightColumns = 1),
+                             dom = 'Bfrtip', # Bfrtip or t
+    buttons = c('colvis','copy', 'csv', 'excel', 'pdf', 'print')
+  )) %>%
+  formatStyle("izvajalec",
+  target = 'row',
+  backgroundColor = styleEqual(c(0, 1), c('gray30', 'lightblue')))
+
+tocnost_ff %>% 
+  filter(str_detect(sifra_ue, sifra_predmetov)) %>% 
+  filter(ocena == "x2_zelo_dobro_27") %>% 
+  summarise(povprecje_zelo_dobro_sodelovanje = mean(procenti, na.rm = T)) %>% 
+  kbl() %>% kable_classic(full_width = T, html_font = "Cambria") %>% add_footnote(prjName)
+
+# tocnost_ff %>% 
+#   filter(str_detect(sifra_ue, sifra_predmetov)) %>% 
+#   mutate(ocena = fct_relevel(ocena, levels)) %>% 
+#   mutate(sodelovanje = procenti/stevilo_predmetov) %>% 
+#   ggplot(aes(sodelovanje, ocena, fill = sodelovanje)) +
+#   geom_col(show.legend = F) +
+#   scale_x_continuous(breaks = c(0,5,10,15,20,25,30,35,40,45,50,55))
+
+frekv_ff_toc <- tocnost_ff %>% 
+  filter(str_detect(sifra_ue, sifra_predmetov)) %>% 
+  drop_na()
+p_toc <- frekv_ff_toc %>% 
+  add_count(sifra_ue, izvajalec) %>% 
+  mutate(stevilo_predmetov_2 = nrow(frekv_ff_toc)/n) %>% 
+  group_by(sifra_ue) %>% 
+  mutate(ocena = fct_relevel(ocena, levels)) %>% 
+  mutate(tocnost = procenti/stevilo_predmetov_2) %>% 
+  ggplot(aes(tocnost, ocena, fill = tocnost)) +
+  geom_col(show.legend = F) 
+p_toc +
+  scale_x_continuous(breaks = seq(0, 100, 10))
+
+if (nrow(frekv_ff_toc) > 1){
+p_toc +
+  # geom_text(aes(label = round(obremenitev), 1)) +
+  facet_wrap(~ sifra_ue)
+} else {
+    print("Za prikaz ocen posameznih predmetov ni dovolj enot")
+  }
+
+```
+
+
+# Kako študenti ocenjujejo učne izide in pridobljene kompetence 
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+kompetence_ff <- frekvence_odgovorov_ff_wide %>% 
+  select(fakulteta:stevilo_respondentov, x2_zelo_slabo_29:ne_morem_zelim_oceniti_34) %>% 
+  gather(key = "ocena", value = "procenti", 
+         -fakulteta, -sifra_ue, -ucna_enota, -izvajalec, -stevilo_respondentov)
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+kompetence_germ <- kompetence_ff %>% 
+  filter(izvajalec %in% izvajalci_germ)
+
+# levels = unique(pogostost_obiskov_ff$ocena)
+levels = c("ne_morem_zelim_oceniti_34", "x2_zelo_slabo_29", "x1_slabo_30", 
+           "x0_povprecno_31", "x1_dobro_32", "x2_zelo_dobro_33")
+  # mutate(ocena = fct_relevel(ocena, levels)) %>% 
+
+kompetence_ff %>% 
+  filter(str_detect(sifra_ue, sifra_predmetov)) %>% 
+  filter(ocena == "x2_zelo_dobro_33") %>% 
+  select(-fakulteta) %>% 
+  # kbl() %>% kable_classic(full_width = T, html_font = "Cambria") %>% add_footnote(prjName)
+DT::datatable(filter = "top", fillContainer = T,
+              extensions = c('Buttons', "ColReorder", "RowReorder",
+                             'FixedColumns', "KeyTable", "Scroller"),
+              options = list(pageLength = 10, 
+                             autowidth = TRUE,
+                             colReorder = TRUE, 
+                             rowReorder = TRUE, order = list(c(0, 'asc')),
+                             keys = TRUE,
+                             deferRender = TRUE,
+                             scrollY = 600, scroller = TRUE,
+                             scrollX = TRUE,
+                             fixedColumns = 
+                               list(leftColumns = 2, rightColumns = 1),
+                             dom = 'Bfrtip', # Bfrtip or t
+    buttons = c('colvis','copy', 'csv', 'excel', 'pdf', 'print')
+  )) %>%
+  formatStyle("izvajalec",
+  target = 'row',
+  backgroundColor = styleEqual(c(0, 1), c('gray30', 'lightblue')))
+
+kompetence_ff %>% 
+  filter(str_detect(sifra_ue, sifra_predmetov)) %>% 
+  filter(ocena == "x2_zelo_dobro_33") %>% 
+  summarise(povprecje_zelo_dobro_sodelovanje = mean(procenti, na.rm = T)) %>% 
+  kbl() %>% kable_classic(full_width = T, html_font = "Cambria") %>% add_footnote(prjName)
+
+# kompetence_ff %>% 
+#   filter(str_detect(sifra_ue, sifra_predmetov)) %>% 
+#   mutate(ocena = fct_relevel(ocena, levels)) %>% 
+#   mutate(sodelovanje = procenti/stevilo_predmetov) %>% 
+#   ggplot(aes(sodelovanje, ocena, fill = sodelovanje)) +
+#   geom_col(show.legend = F) +
+#   scale_x_continuous(breaks = c(0,5,10,15,20,25,30,35,40,45,50,55))
+
+frekv_ff_komp <- kompetence_ff %>% 
+  filter(str_detect(sifra_ue, sifra_predmetov)) %>% 
+  drop_na()
+p_komp <- frekv_ff_komp %>% 
+  add_count(sifra_ue, izvajalec) %>% 
+  mutate(stevilo_predmetov_2 = nrow(frekv_ff_komp)/n) %>% 
+  group_by(sifra_ue) %>% 
+  mutate(ocena = fct_relevel(ocena, levels)) %>% 
+  mutate(kompetence = procenti/stevilo_predmetov_2) %>% 
+  ggplot(aes(kompetence, ocena, fill = kompetence)) +
+  geom_col(show.legend = F) 
+p_komp +
+  scale_x_continuous(breaks = seq(0, 100, 10))
+
+if (nrow(frekv_ff_komp) > 1){
+p_komp +
+  # geom_text(aes(label = round(obremenitev), 1)) +
+  facet_wrap(~ sifra_ue)
+} else {
+    print("Za prikaz ocen posameznih predmetov ni dovolj enot")
+  }
+
+```
+
+# Objektivnost, pravičnost in jasna merila ocenjevanja
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+objektivnost_ff <- frekvence_odgovorov_ff_wide %>% 
+  select(fakulteta:stevilo_respondentov, x2_zelo_slabo_35:ne_morem_zelim_oceniti_40) %>% 
+# x2_zelo_slabo_41:ne_morem_zelim_oceniti_46) %>% 
+  gather(key = "ocena", value = "procenti", 
+         -fakulteta, -sifra_ue, -ucna_enota, -izvajalec, -stevilo_respondentov)
+
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+objektivnost_germ <- objektivnost_ff %>% 
+  filter(izvajalec %in% izvajalci_germ)
+
+# levels = unique(pogostost_obiskov_ff$ocena)
+# levels = c("ne_morem_zelim_oceniti_46", "x2_zelo_slabo_41", "x1_slabo_42", 
+#            "x0_povprecno_43", "x1_dobro_44", "x2_zelo_dobro_45")
+  # mutate(ocena = fct_relevel(ocena, levels)) %>% 
+
+levels = c("ne_morem_zelim_oceniti_40", "x2_zelo_slabo_35", "x1_slabo_36", 
+           "x0_povprecno_37", "x1_dobro_38", "x2_zelo_dobro_39")
+
+objektivnost_ff %>% 
+  filter(str_detect(sifra_ue, sifra_predmetov)) %>% 
+  # filter(ocena == "x2_zelo_dobro_45") %>% 
+  filter(ocena == "x2_zelo_dobro_39") %>% 
+  select(-fakulteta) %>% 
+  # kbl() %>% kable_classic(full_width = T, html_font = "Cambria") %>% add_footnote(prjName)
+DT::datatable(filter = "top", fillContainer = T,
+              extensions = c('Buttons', "ColReorder", "RowReorder",
+                             'FixedColumns', "KeyTable", "Scroller"),
+              options = list(pageLength = 10, 
+                             autowidth = TRUE,
+                             colReorder = TRUE, 
+                             rowReorder = TRUE, order = list(c(0, 'asc')),
+                             keys = TRUE,
+                             deferRender = TRUE,
+                             scrollY = 600, scroller = TRUE,
+                             scrollX = TRUE,
+                             fixedColumns = 
+                               list(leftColumns = 2, rightColumns = 1),
+                             dom = 'Bfrtip', # Bfrtip or t
+    buttons = c('colvis','copy', 'csv', 'excel', 'pdf', 'print')
+  )) %>%
+  formatStyle("izvajalec",
+  target = 'row',
+  backgroundColor = styleEqual(c(0, 1), c('gray30', 'lightblue')))
+
+objektivnost_ff %>% 
+  filter(str_detect(sifra_ue, sifra_predmetov)) %>% 
+  # filter(ocena == "x2_zelo_dobro_45") %>% 
+  filter(ocena == "x2_zelo_dobro_39") %>% 
+  summarise(povprecje_zelo_dobro_sodelovanje = mean(procenti, na.rm = T)) %>% 
+  kbl() %>% kable_classic(full_width = T, html_font = "Cambria") %>% add_footnote(prjName)
+
+# objektivnost_ff %>% 
+#   filter(str_detect(sifra_ue, sifra_predmetov)) %>% 
+#   mutate(ocena = fct_relevel(ocena, levels)) %>% 
+#   mutate(sodelovanje = procenti/stevilo_predmetov) %>% 
+#   ggplot(aes(sodelovanje, ocena, fill = sodelovanje)) +
+#   geom_col(show.legend = F) +
+#   scale_x_continuous(breaks = c(0,5,10,15,20,25,30,35,40,45,50,55))
+
+frekv_ff_obj <- objektivnost_ff %>% 
+  filter(str_detect(sifra_ue, sifra_predmetov)) %>% 
+  drop_na()
+p_obj <- frekv_ff_obj %>% 
+  add_count(sifra_ue, izvajalec) %>% 
+  mutate(stevilo_predmetov_2 = nrow(frekv_ff_obj)/n) %>% 
+  group_by(sifra_ue) %>% 
+  mutate(ocena = fct_relevel(ocena, levels)) %>% 
+  mutate(objektivnost = procenti/stevilo_predmetov_2) %>% 
+  ggplot(aes(objektivnost, ocena, fill = objektivnost)) +
+  geom_col(show.legend = F) 
+p_obj +
+  scale_x_continuous(breaks = seq(0, 100, 10))
+
+if (nrow(frekv_ff_obj) > 1){
+p_obj +
+  # geom_text(aes(label = round(obremenitev), 1)) +
+  facet_wrap(~ sifra_ue)
+} else {
+    print("Za prikaz ocen posameznih predmetov ni dovolj enot")
+  }
+
+```
+
+
+# Predavanja, seminarji in vaje
+
+Ta mnenja smo v prejšnjih letih izpustili.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+prseva_ff <- frekvence_odgovorov_ff_wide %>% 
+  select(fakulteta:stevilo_respondentov, x2_zelo_slabo_11:ne_morem_zelim_oceniti_16) %>% 
+  gather(key = "ocena", value = "procenti", 
+         -fakulteta, -sifra_ue, -ucna_enota, -izvajalec, -stevilo_respondentov)
+
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+prseva_germ <- prseva_ff %>% 
+  filter(izvajalec %in% izvajalci_germ)
+
+# levels = unique(pogostost_obiskov_ff$ocena)
+# levels = c("ne_morem_zelim_oceniti_22", "x2_zelo_slabo_17", "x1_slabo_18", 
+#            "x0_povprecno_19", "x1_dobro_20", "x2_zelo_dobro_21")
+  # mutate(ocena = fct_relevel(ocena, levels)) %>% 
+levels = c("ne_morem_zelim_oceniti_16", "x2_zelo_slabo_11", "x1_slabo_12", 
+           "x0_povprecno_13", "x1_dobro_14", "x2_zelo_dobro_15")
+
+prseva_ff %>% 
+  filter(str_detect(sifra_ue, sifra_predmetov)) %>% 
+  # filter(ocena == "x2_zelo_dobro_21") %>% 
+  filter(ocena == "x2_zelo_dobro_15") %>% 
+  select(-fakulteta) %>% 
+  # kbl() %>% kable_classic(full_width = T, html_font = "Cambria") %>% add_footnote(prjName)
+DT::datatable(filter = "top", fillContainer = T,
+              extensions = c('Buttons', "ColReorder", "RowReorder",
+                             'FixedColumns', "KeyTable", "Scroller"),
+              options = list(pageLength = 10, 
+                             autowidth = TRUE,
+                             colReorder = TRUE, 
+                             rowReorder = TRUE, order = list(c(0, 'asc')),
+                             keys = TRUE,
+                             deferRender = TRUE,
+                             scrollY = 600, scroller = TRUE,
+                             scrollX = TRUE,
+                             fixedColumns = 
+                               list(leftColumns = 2, rightColumns = 1),
+                             dom = 'Bfrtip', # Bfrtip or t
+    buttons = c('colvis','copy', 'csv', 'excel', 'pdf', 'print')
+  )) %>%
+  formatStyle("izvajalec",
+  target = 'row',
+  backgroundColor = styleEqual(c(0, 1), c('gray30', 'lightblue')))
+
+prseva_ff %>% 
+  filter(str_detect(sifra_ue, sifra_predmetov)) %>% 
+  # filter(ocena == "x2_zelo_dobro_21") %>% 
+  filter(ocena == "x2_zelo_dobro_15") %>% 
+  summarise(povprecje_zelo_dobro_sodelovanje = mean(procenti, na.rm = T)) %>% 
+  kbl() %>% kable_classic(full_width = T, html_font = "Cambria") %>% add_footnote(prjName)
+
+# prseva_ff %>% 
+#   filter(str_detect(sifra_ue, sifra_predmetov)) %>% 
+#   mutate(ocena = fct_relevel(ocena, levels)) %>% 
+#   mutate(sodelovanje = procenti/stevilo_predmetov) %>% 
+#   ggplot(aes(sodelovanje, ocena, fill = sodelovanje)) +
+#   geom_col(show.legend = F) +
+#   scale_x_continuous(breaks = c(0,5,10,15,20,25,30,35,40,45,50,55))
+
+prseva_ff_qual <- prseva_ff %>% 
+  filter(str_detect(sifra_ue, sifra_predmetov)) %>% 
+  drop_na()
+p_qual <- prseva_ff_qual %>% 
+  add_count(sifra_ue, izvajalec) %>% 
+  mutate(stevilo_predmetov_2 = nrow(prseva_ff_qual)/n) %>% 
+  group_by(sifra_ue) %>% 
+  mutate(ocena = fct_relevel(ocena, levels)) %>% 
+  mutate(vsecnost = procenti/stevilo_predmetov_2) %>% 
+  ggplot(aes(vsecnost, ocena, fill = vsecnost)) +
+  geom_col(show.legend = F) 
+p_qual +
+  scale_x_continuous(breaks = seq(0, 100, 10))
+
+if (nrow(prseva_ff_qual) > 1){
+p_qual +
+  # geom_text(aes(label = round(obremenitev), 1)) +
+  facet_wrap(~ sifra_ue)
+} else {
+    print("Za prikaz ocen posameznih predmetov ni dovolj enot")
+  }
+
+```
+
+
+
+# SEP Točka 13
+# Povzetek obremenitve študentov po UE (pri PR, SE, VAje) in količina pri posameznih UE.
+
+Legenda:
+
+Št. veljavnih odgovorov: število veljavno izpolnjenih anket glede izvedbe učne enote   
+
+S.O.: stopnja odziva; število veljavnih odgovorov / število respondentov   
+S.O.  Izvedba: število veljavno izpolnjenih anket glede izvedbe učnih enot / število respondentov   
+S.O.  Izpit:  število veljavno izpolnjenih anket glede izvedbe izpita / število respondentov z opravljenim izpitom   
+Ocena R.P.: povprečna ocena učnih enot z več kot 50 % stopnjo odziva, v primeru ne reprezentativne skupne povprečne ocene   
+S.O. R.P.: stopnja odziva pri reprezentativno ocenjenih učnih enotah v primeru ne reprezentativne skupne povprečne ocene   
+
+Prehodnost: študenti, ki so v obravnavanem študijskem letu bili prvič vpisani v pripadajoči letnik študija, so imeli učno enoto, pri katerih pedagoški delavec sodeluje med svojimi obveznostmi in so uspešno opravili izpit / vsi študenti, ki so v obravnavanem študijskem letu bili prvič vpisani v pripadajoči letnik študija in so imeli učno enoto med svojimi obveznostmi.   
+
+NR: ocena ni reprezentativna, ker je bilo veljavnih manj kot 50 % odgovorov   
+PRIIMEK IME*: število veljavno izpolnjenih anket je manjše od 6.   
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+obremenitve_ff_wide <- 
+  read_xlsx(pedelo, sheet = "Obremenitve študentov (UE)", skip = 3) %>% 
+  clean_names() %>%
+  mutate(ucna_enota = str_to_title(ucna_enota)) %>% 
+  # mutate(s_o_8 = as.numeric(s_o_8)) %>% 
+  # mutate(s_o_16 = as.numeric(s_o_16)) %>% 
+  mutate(s_o_10 = as.numeric(s_o_10)) %>% 
+  mutate(s_o_18 = as.numeric(s_o_18)) %>% 
+  mutate(s_o_30 = as.numeric(s_o_30))
+
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+obremenitve_ff_pr <- obremenitve_ff_wide %>% 
+  # select(fakulteta_ucne_enote:stevilo_respondentov, premalo_5:s_o_8) %>% 
+  select(fakulteta_ucne_enote:dvoletno_odstopanje, premalo_7:s_o_10) %>% 
+  gather(key = "ocena", value = "procenti", 
+         -fakulteta_ucne_enote, -sifra_ucne_enote, -ucna_enota, 
+         -stevilo_respondentov, 
+         -ugotovljeno_odstopanje, -dvoletno_odstopanje)
+
+obremenitve_ff_se <- obremenitve_ff_wide %>% 
+  # select(fakulteta_ucne_enote:stevilo_respondentov, premalo_9:s_o_12) %>% 
+  select(fakulteta_ucne_enote:dvoletno_odstopanje, premalo_11:s_o_14) %>% 
+  gather(key = "ocena", value = "procenti", 
+         -fakulteta_ucne_enote, -sifra_ucne_enote, -ucna_enota,
+         -stevilo_respondentov, 
+         -ugotovljeno_odstopanje, -dvoletno_odstopanje)
+
+obremenitve_ff_vaje <- obremenitve_ff_wide %>% 
+  # select(fakulteta_ucne_enote:stevilo_respondentov, premalo_13:s_o_16) %>% 
+  select(fakulteta_ucne_enote:dvoletno_odstopanje, premalo_15:s_o_18) %>% 
+  gather(key = "ocena", value = "procenti", 
+         -fakulteta_ucne_enote, -sifra_ucne_enote, -ucna_enota, 
+         -stevilo_respondentov, 
+         -ugotovljeno_odstopanje, -dvoletno_odstopanje)
+
+obremenitve_ff_sds <- obremenitve_ff_wide %>% 
+  # select(fakulteta_ucne_enote:stevilo_respondentov, manj:s_o_28) %>% 
+  select(fakulteta_ucne_enote:dvoletno_odstopanje, manj:s_o_30) %>% 
+  gather(key = "ocena", value = "procenti", 
+         -fakulteta_ucne_enote, -sifra_ucne_enote, -ucna_enota, 
+         -stevilo_respondentov, 
+         -ugotovljeno_odstopanje, -dvoletno_odstopanje)
+
+```
+
+## Obremenitve PR
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+obremenitve_ff_pr %>% 
+  # filter(!is.na(procenti)) %>% 
+  filter(str_detect(sifra_ucne_enote, sifra_predmetov)) %>% 
+  # filter(ocena == "ustrezno_6") %>% 
+  filter(ocena == "ustrezno_8") %>% 
+  select(-fakulteta_ucne_enote) %>% 
+  # kbl() %>% kable_classic(full_width = T, html_font = "Cambria") %>% add_footnote(prjName)
+DT::datatable(filter = "top", fillContainer = T,
+              extensions = c('Buttons', "ColReorder", "RowReorder",
+                             'FixedColumns', "KeyTable", "Scroller"),
+              options = list(pageLength = 10, 
+                             autowidth = TRUE,
+                             colReorder = TRUE, 
+                             rowReorder = TRUE, order = list(c(0, 'asc')),
+                             keys = TRUE,
+                             deferRender = TRUE,
+                             scrollY = 600, scroller = TRUE,
+                             scrollX = TRUE,
+                             fixedColumns = 
+                               list(leftColumns = 2, rightColumns = 1),
+                             dom = 'Bfrtip', # Bfrtip or t
+    buttons = c('colvis','copy', 'csv', 'excel', 'pdf', 'print')
+  )) %>%
+  formatStyle("ucna_enota",
+  target = 'row',
+  backgroundColor = styleEqual(c(0, 1), c('gray30', 'lightblue')))
+
+obremenitve_ff_pr %>% 
+  # filter(!is.na(procenti)) %>% 
+  filter(str_detect(sifra_ucne_enote, sifra_predmetov)) %>% 
+  # filter(ocena == "ustrezno_10") %>% 
+  filter(ocena == "ustrezno_8") %>% 
+  summarise(avg_procenti = mean(procenti, na.rm = T)) %>% 
+  kbl() %>% kable_classic(full_width = T, html_font = "Cambria") %>% add_footnote(prjName)
+
+levels = c("premalo_7", "ustrezno_8", "prevec_9", "s_o_10")
+
+# obremenitve_ff_pr %>% 
+#   filter(str_detect(sifra_ucne_enote, sifra_predmetov)) %>% 
+#   mutate(ocena = fct_relevel(ocena, levels)) %>% 
+#   mutate(obremenitev = procenti/stevilo_predmetov) %>% 
+#   ggplot(aes(obremenitev, ocena, fill = obremenitev)) +
+#   geom_col(show.legend = F) +
+#   scale_x_continuous(breaks = c(0,5,10,15,20,25,30,35,40,45,50,55))
+
+obr_pr <- obremenitve_ff_pr %>% 
+  filter(str_detect(sifra_ucne_enote, sifra_predmetov)) %>% 
+  mutate(ocena = fct_relevel(ocena, levels)) %>% 
+  drop_na()
+p_pr <- obr_pr %>% 
+  add_count(sifra_ucne_enote) %>% 
+  mutate(stevilo_predmetov_2 = nrow(obr_pr)/n) %>% 
+  group_by(sifra_ucne_enote) %>% 
+  mutate(obremenitev = procenti/stevilo_predmetov_2) %>% 
+  ggplot(aes(obremenitev, ocena, fill = obremenitev)) +
+  geom_col(show.legend = F) 
+p_pr +
+  scale_x_continuous(breaks = seq(0, 100, 10))
+
+if (nrow(obr_pr) > 1){
+p_pr +
+  # geom_text(aes(label = round(obremenitev), 1)) +
+  facet_wrap(~ sifra_ucne_enote)
+} else {
+    print("Za prikaz ocen posameznih predmetov ni dovolj enot")
+  }
+
+```
+
+## Obremenitve SE
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+obremenitve_ff_se %>% 
+  # filter(!is.na(procenti)) %>% 
+  filter(str_detect(sifra_ucne_enote, sifra_predmetov)) %>% 
+  # filter(ocena == "ustrezno_10") %>% 
+  filter(ocena == "ustrezno_12") %>% 
+  select(-fakulteta_ucne_enote) %>% 
+  # kbl() %>% kable_classic(full_width = T, html_font = "Cambria") %>% add_footnote(prjName)
+DT::datatable(filter = "top", fillContainer = T,
+              extensions = c('Buttons', "ColReorder", "RowReorder",
+                             'FixedColumns', "KeyTable", "Scroller"),
+              options = list(pageLength = 10, 
+                             autowidth = TRUE,
+                             colReorder = TRUE, 
+                             rowReorder = TRUE, order = list(c(0, 'asc')),
+                             keys = TRUE,
+                             deferRender = TRUE,
+                             scrollY = 600, scroller = TRUE,
+                             scrollX = TRUE,
+                             fixedColumns = 
+                               list(leftColumns = 2, rightColumns = 1),
+                             dom = 'Bfrtip', # Bfrtip or t
+    buttons = c('colvis','copy', 'csv', 'excel', 'pdf', 'print')
+  )) %>%
+  formatStyle("ucna_enota",
+  target = 'row',
+  backgroundColor = styleEqual(c(0, 1), c('gray30', 'lightblue')))
+
+obremenitve_ff_se %>% 
+  # filter(!is.na(procenti)) %>% 
+  filter(str_detect(sifra_ucne_enote, sifra_predmetov)) %>% 
+  # filter(ocena == "ustrezno_10") %>% 
+  filter(ocena == "ustrezno_12") %>% 
+  summarise(avg_procenti = mean(procenti, na.rm = T)) %>% 
+  kbl() %>% kable_classic(full_width = T, html_font = "Cambria") %>% add_footnote(prjName)
+
+levels = c("premalo_11", "ustrezno_12", "prevec_13", "s_o_14")
+
+# obremenitve_ff_se %>% 
+#   filter(str_detect(sifra_ucne_enote, sifra_predmetov)) %>% 
+#   mutate(ocena = fct_relevel(ocena, levels)) %>% 
+#   mutate(sodelovanje = procenti/stevilo_predmetov) %>% 
+#   ggplot(aes(sodelovanje, ocena, fill = sodelovanje)) +
+#   geom_col(show.legend = F) +
+#   scale_x_continuous(breaks = c(0,5,10,15,20,25,30,35,40,45,50,55))
+
+obr_se <- obremenitve_ff_se %>% 
+  filter(str_detect(sifra_ucne_enote, sifra_predmetov)) %>% 
+  mutate(ocena = fct_relevel(ocena, levels)) %>% 
+  drop_na()
+p_se <- obr_se %>% 
+  add_count(sifra_ucne_enote) %>% 
+  mutate(stevilo_predmetov_2 = nrow(obr_se)/n) %>% 
+  group_by(sifra_ucne_enote) %>% 
+  mutate(obremenitev = procenti/stevilo_predmetov_2) %>% 
+  ggplot(aes(obremenitev, ocena, fill = obremenitev)) +
+  geom_col(show.legend = F) 
+p_se +
+  scale_x_continuous(breaks = seq(0, 100, 10))
+
+if (nrow(obr_se) > 1){
+  p_se +
+  # geom_text(aes(label = round(obremenitev), 1)) +
+  facet_wrap(~ sifra_ucne_enote)
+} else {
+    print("Za prikaz ocen posameznih predmetov ni dovolj enot")
+  }
+
+```
+
+## Obremenitve Vaje
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+obremenitve_ff_vaje %>% 
+  # filter(!is.na(procenti)) %>%
+  # mutate(procenti = as.numeric(procenti)) %>%
+  filter(str_detect(sifra_ucne_enote, sifra_predmetov)) %>% 
+  # filter(ocena == "ustrezno_14") %>% 
+  filter(ocena == "ustrezno_16") %>% 
+  select(-fakulteta_ucne_enote) %>% 
+  # kbl() %>% kable_classic(full_width = T, html_font = "Cambria") %>% add_footnote(prjName)
+DT::datatable(filter = "top", fillContainer = T,
+              extensions = c('Buttons', "ColReorder", "RowReorder",
+                             'FixedColumns', "KeyTable", "Scroller"),
+              options = list(pageLength = 10, 
+                             autowidth = TRUE,
+                             colReorder = TRUE, 
+                             rowReorder = TRUE, order = list(c(0, 'asc')),
+                             keys = TRUE,
+                             deferRender = TRUE,
+                             scrollY = 600, scroller = TRUE,
+                             scrollX = TRUE,
+                             fixedColumns = 
+                               list(leftColumns = 2, rightColumns = 1),
+                             dom = 'Bfrtip', # Bfrtip or t
+    buttons = c('colvis','copy', 'csv', 'excel', 'pdf', 'print')
+  )) %>%
+  formatStyle("ucna_enota",
+  target = 'row',
+  backgroundColor = styleEqual(c(0, 1), c('gray30', 'lightblue')))
+
+obremenitve_ff_vaje %>% 
+  # filter(!is.na(procenti)) %>%
+  # mutate(procenti = as.numeric(procenti)) %>% 
+  filter(str_detect(sifra_ucne_enote, sifra_predmetov)) %>% 
+  # filter(ocena == "ustrezno_14") %>% 
+  filter(ocena == "ustrezno_16") %>% 
+  summarise(avg_procenti = mean(procenti, na.rm = T)) %>% 
+  kbl() %>% kable_classic(full_width = T, html_font = "Cambria") %>% add_footnote(prjName)
+
+levels = c("premalo_15", "ustrezno_16", "prevec_17", "s_o_18")
+
+# obremenitve_ff_vaje %>% 
+#   filter(str_detect(sifra_ucne_enote, sifra_predmetov)) %>% 
+#   mutate(ocena = fct_relevel(ocena, levels)) %>% 
+#   mutate(sodelovanje = procenti/stevilo_predmetov) %>% 
+#   ggplot(aes(sodelovanje, ocena, fill = sodelovanje)) +
+#   geom_col(show.legend = F) +
+#   scale_x_continuous(breaks = c(0,5,10,15,20,25,30,35,40,45,50,55))
+
+obr_vaje <- obremenitve_ff_vaje %>% 
+  filter(str_detect(sifra_ucne_enote, sifra_predmetov)) %>% 
+  drop_na()
+p_vaje <- obr_vaje %>% 
+  add_count(sifra_ucne_enote) %>% 
+  mutate(stevilo_predmetov_2 = nrow(obr_vaje)/n) %>% 
+  group_by(sifra_ucne_enote) %>% 
+  mutate(ocena = fct_relevel(ocena, levels)) %>% 
+  mutate(obremenitev = procenti/stevilo_predmetov_2) %>% 
+  ggplot(aes(obremenitev, ocena, fill = obremenitev)) +
+  geom_col(show.legend = F) 
+p_vaje +
+  scale_x_continuous(breaks = seq(0, 100, 10))
+
+if (nrow(obr_vaje) > 1){
+  p_vaje +
+  # geom_text(aes(label = round(obremenitev), 1)) +
+  facet_wrap(~ sifra_ucne_enote)
+} else {
+    print("Za prikaz ocen posameznih predmetov ni dovolj enot")
+  }
+
+```
+
+## Obremenitve SDS
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+obremenitve_ff_sds %>% 
+  # filter(!is.na(procenti)) %>% 
+  filter(str_detect(sifra_ucne_enote, sifra_predmetov)) %>% 
+  filter(ocena == "priblizno_toliko_20_percent") %>% 
+  select(-fakulteta_ucne_enote) %>% 
+  # kbl() %>% kable_classic(full_width = T, html_font = "Cambria") %>% add_footnote(prjName)
+DT::datatable(filter = "top", fillContainer = T,
+              extensions = c('Buttons', "ColReorder", "RowReorder",
+                             'FixedColumns', "KeyTable", "Scroller"),
+              options = list(pageLength = 10, 
+                             autowidth = TRUE,
+                             colReorder = TRUE, 
+                             rowReorder = TRUE, order = list(c(0, 'asc')),
+                             keys = TRUE,
+                             deferRender = TRUE,
+                             scrollY = 600, scroller = TRUE,
+                             scrollX = TRUE,
+                             fixedColumns = 
+                               list(leftColumns = 2, rightColumns = 1),
+                             dom = 'Bfrtip', # Bfrtip or t
+    buttons = c('colvis','copy', 'csv', 'excel', 'pdf', 'print')
+  )) %>%
+  formatStyle("ucna_enota",
+  target = 'row',
+  backgroundColor = styleEqual(c(0, 1), c('gray30', 'lightblue')))
+
+obremenitve_ff_sds %>% 
+  # filter(!is.na(procenti)) %>%
+  filter(str_detect(sifra_ucne_enote, sifra_predmetov)) %>% 
+  filter(ocena == "priblizno_toliko_20_percent") %>% 
+  summarise(avg_procenti = mean(procenti, na.rm = T)) %>% 
+  kbl() %>% kable_classic(full_width = T, html_font = "Cambria") %>% add_footnote(prjName)
+
+levels = c("manj", "priblizno_toliko_20_percent", "vec", "s_o_30")
+# obremenitve_ff_sds %>% select(ocena) %>% distinct() %>% pull()
+
+# obremenitve_ff_sds %>% 
+#   filter(str_detect(sifra_ucne_enote, sifra_predmetov)) %>% 
+#   mutate(ocena = fct_relevel(ocena, levels)) %>% 
+#   mutate(sodelovanje = procenti/stevilo_predmetov) %>% 
+#   ggplot(aes(sodelovanje, ocena, fill = sodelovanje)) +
+#   geom_col(show.legend = F) +
+#   scale_x_continuous(breaks = c(0,5,10,15,20,25,30,35,40,45,50,55))
+
+obr_sds <- obremenitve_ff_sds %>% 
+  filter(str_detect(sifra_ucne_enote, sifra_predmetov)) %>% 
+  drop_na()
+p_sds <- obr_sds %>% 
+  add_count(sifra_ucne_enote) %>% 
+  mutate(stevilo_predmetov_2 = nrow(obr_sds)/n) %>% 
+  group_by(sifra_ucne_enote) %>% 
+  mutate(ocena = fct_relevel(ocena, levels)) %>% 
+  mutate(obremenitev = procenti/stevilo_predmetov_2) %>% 
+  ggplot(aes(obremenitev, ocena, fill = obremenitev)) +
+  geom_col(show.legend = F)
+p_sds +
+    scale_x_continuous(breaks = seq(0, 100, 10))
+
+if (nrow(obr_sds) > 1){
+p_sds +
+  # geom_text(aes(label = round(obremenitev), 1)) +
+  facet_wrap(~ sifra_ucne_enote)
+} else {
+    print("Za prikaz ocen posameznih predmetov ni dovolj enot")
+  }
+
+```
+
+
