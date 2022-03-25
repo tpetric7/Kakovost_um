@@ -9,8 +9,8 @@ Programski skripti v računalniškem jeziku `R` pričakujejo naslednje delovne z
 - FF-AnketaOZadovoljstvu20_21.xlsx   
 - FF_Četrto in vsako nadaljnje opravljanje izpita.xlsx.   
 
-Delovni zvezki niso priloženi. Pred izpisovanjem jih je treba prekopirati v mapo *data*.   
+Delovni zvezki niso priloženi. Pred izpisovanjem jih je treba prekopirati v mapo *data* (ki jo je treba prej narediti kot subdirektorij, tj. kakovost_um/data).   
 
-Vsak delovni zvezek se obdeluje in izpiše posebej. Izhodne datoteke v obliki html se tvorijo v mapi *SEP2021* (ki jo je treba pred začetkom izpisovanja narediti).  
+Vsak delovni zvezek se obdeluje in izpiše posebej. Izhodne datoteke v obliki html se tvorijo v mapi *sep2021* (ki jo je treba pred začetkom izpisovanja narediti kot subdirektorij, tj. kakovost_um/sep2021).  
 
 Programski skript *Render_reports.Rmd* poskrbi za izpis posameznih html datotek (za vsak delovni zvezek in študijski program). 
