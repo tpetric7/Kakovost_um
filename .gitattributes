@@ -1,3 +1,4 @@
-*.Rmd|rmd linguist-detectable=true
+*.Rmd linguist-detectable=true
+*.rmd linguist-detectable=true
 *.html linguist-detectable=false
 *.css linguist-detectable=false
