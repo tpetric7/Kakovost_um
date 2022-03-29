@@ -9,7 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-# teh programov ni (več) ali samo v starejših letih
+# teh programov ni (več) ali samo v prejšnjih študijskih letih
 pedagosko_delo_uciteljev <- "11PA", "22YG"
 kazalniki_izobrazevanja <- "11PA"
 zadovoljstvo_studentov <- "11NP", "11AP", "22YR", "22YM"
@@ -29,7 +29,7 @@ sifre_sp <- c("11MA", "11MN", "11PA", "11AP", "11NP", "XNXJ")
 ```
 
 
-Not included in SEP2021
+Niso vključeni v SEP2021
 
 ```{r}
 sifre_sp <- c("22YM", "22YR", "11AP", "11NP")
@@ -88,7 +88,7 @@ sifre_sp <- c("11MA", "11MN", "11PA", "11AP", "11NP", "XNXJ")
 ```
 
 
-Not included in SEP2021
+Niso vključeni v SEP2021
 
 ```{r}
 sifre_sp <- c("22YM", "22YR", "11PA")
@@ -133,21 +133,20 @@ sifre_sp <- c("11MA", "11MN", "11PA", "11AP", "11NP", "XNXJ")
 
 ```
 
-Not included in SEP2021?
+Niso vključeni v SEP2021
 
 ```{r}
 sifre_sp <- c("22YM", "22YR")
 
 ```
 
-Not enough
 
 ```{r}
 sifre_sp <- c("22YG", "XNXJ", "11PA")
 
 ```
 
-Posebne šifre predmetov !!!
+Enopredmetni programi imajo drugačen vzorec predmetnih šifer kot dvopredmetni študijski programi !!!
 
 ```{r}
 sifre_sp <- c("GERE", "PSIE", "SLOE", "SOCE", "ZGOE")
@@ -173,35 +172,5 @@ for (prjName in sifre_sp) {
     render_one(prjName)
 }
 
-```
-
-
-
-
-
-
-
-
-## sifra_sp + leto
-
-```{r eval=FALSE, include=FALSE}
-render_one <- function(state, year) {
-  # assuming the output format of input.Rmd is PDF
-  rmarkdown::render(
-    'input.Rmd',
-    output_file = paste0(state, '-', year, '.pdf'),
-    params = list(state = state, year = year),
-    envir = parent.frame()
-  )
-}
-```
-
-
-```{r eval=FALSE, include=FALSE}
-for (state in state.name) {
-  for (year in 2000:2020) {
-    render_one(state, year)
-  }
-}
 ```
 
