@@ -1,0 +1,176 @@
+---
+title: "Render_reports"
+author: "Teodor Petrič"
+date: "28 12 2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# teh programov ni (več) ali samo v prejšnjih študijskih letih
+pedagosko_delo_uciteljev <- "11PA", "22YG"
+kazalniki_izobrazevanja <- "11PA"
+zadovoljstvo_studentov <- "11NP", "11AP", "22YR", "22YM"
+
+## sifra_sp
+
+```{r}
+sifre_sp <- c("Univerza", "FILOZOFSKA", "11AN", "11FL", "11GE", "11MA", "11MN", "11NE", "11PA", "11PE", "11SC", "11SL", "11UZ", "11ZG", "ZGOE", "SOCE", "SLOE", "PSIE", "GERE", "22YA", "22YB", "22YC", "22YD", "22YE", "22YF", "22YH", "22YI", "22YJ", "22YK", "22YL", "22YO", "XPXA", "XNXB", "XNXC", "XNXE", "XNXF", "XNXH", "XNXJ")
+
+```
+
+Prevodoslovje SEP2021
+
+```{r}
+sifre_sp <- c("11MA", "11MN", "11PA", "11AP", "11NP", "XNXJ")
+
+```
+
+
+Niso vključeni v SEP2021
+
+```{r}
+sifre_sp <- c("22YM", "22YR", "11AP", "11NP")
+
+```
+
+## Zadovoljstvo
+
+```{r}
+render_one <- function(sifra_sp) {
+  # assuming the output format of input.Rmd is html
+  rmarkdown::render(
+    'Zadovoljstvo_studentov_user_input_en_program.Rmd',
+    output_file = paste0(
+      "sep2021/", "zadovoljstvo_studentov", "_", sifra_sp, '.html'),
+    params = list(sifra_sp = sifra_sp),
+    envir = parent.frame()
+  )
+}
+```
+
+
+```{r}
+for (prjName in sifre_sp) {
+    render_one(prjName)
+}
+
+```
+
+
+## Kazalniki
+
+1. stopnja
+
+```{r}
+sifre_sp <- c("11AN", "11AP", "11FL", "11GE", "11HU", "11NE", "11NP", "11PE", "11SC", "11SL", "11UZ", "11ZG", "GERE", "PSIE", "SLOE", "SOCE", "ZGOE")
+```
+
+2. stopnja
+
+```{r}
+sifre_sp <- c("22YA", "22YB", "22YC", "22YD", "22YE", "22YF", "22YG", "22YH", "22YI", "22YJ", "22YK", "22YL", "22YM", "22YN", "22YO", "22YR", "XPXA", "XNXB", "XNXC", "XNXE", "XNXF", "XNXH", "XNXJ")
+```
+
+1. in 2. stopnja
+
+```{r}
+sifre_sp <- c("11AN", "11AP", "11FL", "11GE", "11HU", "11NE", "11NP", "11PE", "11SC", "11SL", "11UZ", "11ZG", "GERE", "PSIE", "SLOE", "SOCE", "ZGOE", "22YA", "22YB", "22YC", "22YD", "22YE", "22YF", "22YG", "22YH", "22YI", "22YJ", "22YK", "22YL", "22YN", "22YO", "XPXA", "XNXB", "XNXC", "XNXE", "XNXF", "XNXH", "XNXJ")
+```
+
+Prevodoslovje SEP2021
+
+```{r}
+sifre_sp <- c("11MA", "11MN", "11PA", "11AP", "11NP", "XNXJ")
+
+```
+
+
+Niso vključeni v SEP2021
+
+```{r}
+sifre_sp <- c("22YM", "22YR", "11PA")
+
+```
+
+
+```{r}
+render_one <- function(sifra_sp) {
+  # assuming the output format of input.Rmd is html
+  rmarkdown::render(
+    'UM_KIZ_FF_en_program.Rmd',
+    output_file = paste0(
+      "sep2021/", "kazalniki_izobrazevanja", "_", sifra_sp, '.html'),
+    params = list(sifra_sp = sifra_sp),
+    envir = parent.frame()
+  )
+}
+```
+
+
+```{r}
+for (prjName in sifre_sp) {
+    render_one(prjName)
+}
+
+```
+
+
+## Pedagoško delo
+
+1. in 2. stopnja
+
+```{r}
+sifre_sp <- c("11AN", "11FL", "11GE", "11HU", "11NE", "11NP",  "11PE", "11SC", "11SL", "11UZ", "11ZG", "GERE", "PSIE", "SLOE", "SOCE", "ZGOE", "22YA", "22YB", "22YC", "22YD", "22YE", "22YF", "22YG", "22YH", "22YI", "22YJ", "22YK", "22YL", "22YN", "22YO", "XPXA", "XNXB", "XNXC", "XNXE", "XNXF", "XNXH", "11AP", "11MA", "11MN", "22YM", "22YR")
+```
+
+Prevodoslovje SEP2021
+
+```{r}
+sifre_sp <- c("11MA", "11MN", "11PA", "11AP", "11NP", "XNXJ")
+
+```
+
+Niso vključeni v SEP2021
+
+```{r}
+sifre_sp <- c("22YM", "22YR")
+
+```
+
+
+```{r}
+sifre_sp <- c("22YG", "XNXJ", "11PA")
+
+```
+
+Enopredmetni programi imajo drugačen vzorec predmetnih šifer kot dvopredmetni študijski programi !!!
+
+```{r}
+sifre_sp <- c("GERE", "PSIE", "SLOE", "SOCE", "ZGOE")
+```
+
+
+```{r}
+render_one <- function(sifra_sp) {
+  # assuming the output format of input.Rmd is html
+  rmarkdown::render(
+    'Pedagosko_delo_en_program.Rmd',
+    output_file = paste0(
+      "sep2021/", "pedagosko_delo_uciteljev", "_", sifra_sp, '.html'),
+    params = list(sifra_sp = sifra_sp),
+    envir = parent.frame()
+  )
+}
+```
+
+
+```{r}
+for (prjName in sifre_sp) {
+    render_one(prjName)
+}
+
+```
+
